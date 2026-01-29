@@ -4,6 +4,7 @@
 
 import { MatchState, PlayerState, STARTER_BEASTS, BEASTS, getBeast, ARENAS, VentState, PowerUpState } from '@beast-royale/shared';
 import { Game } from './game';
+import { drawBeastIcon } from './beast-icons';
 
 // Beast color mappings (Among Us style)
 const BEAST_COLORS: Record<string, string> = {
@@ -124,13 +125,19 @@ export class UIManager {
       card.className = `beast-card ${beastId === this.game.getSelectedBeast() ? 'selected' : ''}`;
       card.dataset.beastId = beastId;
 
-      // Use blob color (Among Us style)
-      const blobColor = BEAST_COLORS[beastId] || beast.color;
+      // Create canvas for beast icon
+      const canvas = document.createElement('canvas');
+      canvas.width = 80;
+      canvas.height = 80;
+      canvas.className = 'beast-canvas';
+      drawBeastIcon(canvas, beastId);
 
-      card.innerHTML = `
-        <div class="beast-blob" style="background: ${blobColor}"></div>
-        <div class="beast-card-name">${beast.name.split(' ')[0]}</div>
-      `;
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'beast-card-name';
+      nameDiv.textContent = beast.name.split(' ')[0];
+
+      card.appendChild(canvas);
+      card.appendChild(nameDiv);
 
       card.addEventListener('click', () => {
         this.game.selectBeast(beastId);
@@ -221,11 +228,21 @@ export class UIManager {
     const abilityNameEl = document.getElementById('ability-name');
     const abilityDescEl = document.getElementById('ability-desc');
 
-    // Use blob color (Among Us style)
-    const blobColor = BEAST_COLORS[beastId] || beast.color;
-
+    // Draw beast icon on canvas in info panel
     if (blobEl) {
-      (blobEl as HTMLElement).style.background = blobColor;
+      // Replace blob div with canvas if not already
+      let canvas = blobEl.querySelector('canvas') as HTMLCanvasElement;
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 120;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        blobEl.innerHTML = '';
+        blobEl.appendChild(canvas);
+        (blobEl as HTMLElement).style.background = 'transparent';
+      }
+      drawBeastIcon(canvas, beastId);
     }
     if (nameEl) nameEl.textContent = beast.name;
 
@@ -334,13 +351,23 @@ export class UIManager {
       screen.classList.add('visible');
     }
 
-    // Update beast blob color in matchmaking
+    // Update beast icon in matchmaking
     const beastId = this.game.getSelectedBeast();
-    const beast = getBeast(beastId);
     const matchmakingBlob = document.getElementById('matchmaking-blob');
-    if (matchmakingBlob && beast) {
-      const blobColor = BEAST_COLORS[beastId] || beast.color;
-      (matchmakingBlob as HTMLElement).style.background = blobColor;
+    if (matchmakingBlob) {
+      // Replace blob div with canvas if not already
+      let canvas = matchmakingBlob.querySelector('canvas') as HTMLCanvasElement;
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        matchmakingBlob.innerHTML = '';
+        matchmakingBlob.appendChild(canvas);
+        (matchmakingBlob as HTMLElement).style.background = 'transparent';
+      }
+      drawBeastIcon(canvas, beastId);
     }
 
     // Set random tip
@@ -704,5 +731,94 @@ export class UIManager {
     } else if (indicator) {
       indicator.classList.remove('visible');
     }
+  }
+
+  // ============================================
+  // PANIC EFFECT
+  // ============================================
+
+  showPanicEffect(): void {
+    // Create panic overlay
+    let overlay = document.getElementById('panic-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'panic-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.1s;
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    // Random panic outcomes with visual effects
+    const outcomes = [
+      { text: 'AAAAAAH!', color: '#ff4444', emoji: '😱' },
+      { text: '*HONK*', color: '#ffdd44', emoji: '🦆' },
+      { text: 'TRIP!', color: '#ff8844', emoji: '🍌' },
+      { text: '*SPIN*', color: '#44ddff', emoji: '🌀' },
+      { text: '🎉 CONFETTI! 🎉', color: '#ff44ff', emoji: '🎊' },
+      { text: '...nothing', color: '#888888', emoji: '😐' },
+      { text: 'CLUTCH!', color: '#44ff44', emoji: '⭐' },
+      { text: 'SHOCKWAVE!', color: '#ffaa00', emoji: '💥' },
+    ];
+
+    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+
+    overlay.innerHTML = `
+      <div style="
+        font-size: 64px;
+        font-weight: bold;
+        color: ${outcome.color};
+        text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+        animation: panicPop 0.5s ease-out;
+        text-align: center;
+      ">
+        <div style="font-size: 80px;">${outcome.emoji}</div>
+        <div>${outcome.text}</div>
+      </div>
+    `;
+
+    // Add animation keyframes if not exists
+    if (!document.getElementById('panic-styles')) {
+      const style = document.createElement('style');
+      style.id = 'panic-styles';
+      style.textContent = `
+        @keyframes panicPop {
+          0% { transform: scale(0.5); opacity: 0; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(1); opacity: 0; }
+        }
+        @keyframes panicShake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-10px); }
+          75% { transform: translateX(10px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Show and animate
+    overlay.style.opacity = '1';
+
+    // Screen shake effect
+    document.body.style.animation = 'panicShake 0.1s ease-in-out 3';
+    setTimeout(() => {
+      document.body.style.animation = '';
+    }, 300);
+
+    // Hide after animation
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+    }, 500);
   }
 }

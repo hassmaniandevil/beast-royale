@@ -250,6 +250,10 @@ export class Game {
   panic(): void {
     if (this.state !== 'playing' || !this.network) return;
     this.network.sendPanic();
+    // Show visual panic effect
+    if (this.ui) {
+      this.ui.showPanicEffect();
+    }
   }
 
   playAgain(): void {
