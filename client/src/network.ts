@@ -18,15 +18,14 @@ export class NetworkManager {
     this.game = game;
 
     // Determine server URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    const port = '3001';  // Game server port
 
-    // Use localhost for development
+    // Use localhost for development, Railway server for production
     if (host === 'localhost' || host === '127.0.0.1') {
-      this.serverUrl = `ws://${host}:${port}`;
+      this.serverUrl = `ws://${host}:3001`;
     } else {
-      this.serverUrl = `${protocol}//${host}:${port}`;
+      // Production server on Railway
+      this.serverUrl = 'wss://beast-royale-server-production.up.railway.app';
     }
 
     console.log(`[Network] Server URL: ${this.serverUrl}`);
