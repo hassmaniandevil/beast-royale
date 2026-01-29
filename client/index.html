@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Beast Royale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Among Us inspired palette - bright, saturated */
+      --red: #c51111;
+      --blue: #132ed1;
+      --green: #117f2d;
+      --pink: #ed54ba;
+      --orange: #ef7d0d;
+      --yellow: #f5f557;
+      --black: #3f474e;
+      --white: #d6e0f0;
+      --purple: #6b2fbb;
+      --cyan: #38fedc;
+      --lime: #50ef39;
+      --brown: #71491e;
+
+      /* UI colors */
+      --bg-dark: #0a0a12;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #252545;
+      --accent: #50ef39;
+      --accent-dark: #3bc92a;
+      --danger: #c51111;
+      --text: #ffffff;
+      --text-dim: #8888aa;
+      --outline: #000000;
+      --outline-width: 4px;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      font-family: 'Fredoka', sans-serif;
+      color: var(--text);
+      touch-action: none;
+      user-select: none;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    #game-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ============================================ */
+    /* CHUNKY BUTTON STYLE */
+    /* ============================================ */
+    .btn {
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 600;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      position: relative;
+      outline: var(--outline-width) solid var(--outline);
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+    }
+
+    .btn:active {
+      transform: translateY(2px);
+    }
+
+    .btn-giant {
+      padding: 20px 60px;
+      font-size: 2rem;
+      border-radius: 24px;
+    }
+
+    .btn-large {
+      padding: 16px 40px;
+      font-size: 1.25rem;
+    }
+
+    .btn-medium {
+      padding: 12px 24px;
+      font-size: 1rem;
+    }
+
+    .btn-green {
+      background: var(--accent);
+      color: var(--outline);
+      box-shadow: 0 6px 0 var(--accent-dark);
+    }
+
+    .btn-green:hover {
+      box-shadow: 0 8px 0 var(--accent-dark);
+    }
+
+    .btn-green:active {
+      box-shadow: 0 2px 0 var(--accent-dark);
+    }
+
+    .btn-red {
+      background: var(--danger);
+      color: var(--text);
+      box-shadow: 0 6px 0 #8a0c0c;
+    }
+
+    .btn-gray {
+      background: var(--black);
+      color: var(--text);
+      box-shadow: 0 6px 0 #2a2f34;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* ============================================ */
+    /* LOADING SCREEN */
+    /* ============================================ */
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #1a1a3e 0%, var(--bg-dark) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .logo-container {
+      position: relative;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 4.5rem;
+      font-weight: 700;
+      color: var(--text);
+      text-shadow:
+        0 0 0 var(--outline),
+        4px 4px 0 var(--outline),
+        -1px -1px 0 var(--outline),
+        1px -1px 0 var(--outline),
+        -1px 1px 0 var(--outline),
+        1px 1px 0 var(--outline);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+
+    .logo-beast { color: var(--lime); }
+    .logo-royale { color: var(--pink); }
+
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .loading-beasts {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .loading-beast {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      outline: 4px solid var(--outline);
+      animation: beastBounce 0.6s ease-in-out infinite;
+    }
+
+    .loading-beast:nth-child(1) { background: var(--red); animation-delay: 0s; }
+    .loading-beast:nth-child(2) { background: var(--blue); animation-delay: 0.1s; }
+    .loading-beast:nth-child(3) { background: var(--green); animation-delay: 0.2s; }
+    .loading-beast:nth-child(4) { background: var(--yellow); animation-delay: 0.3s; }
+    .loading-beast:nth-child(5) { background: var(--pink); animation-delay: 0.4s; }
+
+    @keyframes beastBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.1); }
+    }
+
+    .loading-bar-container {
+      width: 300px;
+      height: 24px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      outline: 4px solid var(--outline);
+      overflow: hidden;
+    }
+
+    .loading-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--lime), var(--cyan));
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+    }
+
+    /* ============================================ */
+    /* MAIN MENU */
+    /* ============================================ */
+    #main-menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at top, #1e1e40 0%, var(--bg-dark) 100%);
+      display: none;
+      z-index: 50;
+      overflow-y: auto;
+    }
+
+    #main-menu.visible { display: block; }
+
+    .menu-container {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      gap: 24px;
+    }
+
+    .menu-logo {
+      font-size: 3rem;
+      font-weight: 700;
+      text-shadow:
+        3px 3px 0 var(--outline),
+        -1px -1px 0 var(--outline),
+        1px -1px 0 var(--outline),
+        -1px 1px 0 var(--outline);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+
+    /* Panel styling */
+    .panel {
+      background: var(--bg-card);
+      border-radius: 24px;
+      padding: 24px;
+      outline: var(--outline-width) solid var(--outline);
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .panel-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      outline: 3px solid var(--outline);
+    }
+
+    .panel-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* Name input */
+    .name-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .name-input {
+      flex: 1;
+      padding: 16px 20px;
+      font-size: 1.2rem;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--bg-dark);
+      border: none;
+      border-radius: 16px;
+      outline: 4px solid var(--outline);
+    }
+
+    .name-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .name-input:focus {
+      outline-color: var(--accent);
+    }
+
+    .dice-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--purple);
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      outline: 4px solid var(--outline);
+      transition: transform 0.2s ease;
+    }
+
+    .dice-btn:hover {
+      transform: rotate(180deg) scale(1.1);
+    }
+
+    /* Beast grid */
+    .beast-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .beast-card {
+      aspect-ratio: 1;
+      background: var(--bg-dark);
+      border-radius: 20px;
+      padding: 12px;
+      cursor: pointer;
+      outline: 4px solid var(--outline);
+      transition: transform 0.15s ease, outline-color 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .beast-card:hover {
+      transform: scale(1.05);
+    }
+
+    .beast-card.selected {
+      outline-color: var(--accent);
+      outline-width: 6px;
+      background: rgba(80, 239, 57, 0.1);
+    }
+
+    .beast-blob {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      outline: 4px solid var(--outline);
+      position: relative;
+    }
+
+    .beast-blob::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 28px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+    }
+
+    .beast-card-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text);
+    }
+
+    /* Beast info */
+    .beast-info {
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--bg-dark);
+      border-radius: 16px;
+      outline: 4px solid var(--outline);
+    }
+
+    .beast-info-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .beast-info-blob {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      outline: 5px solid var(--outline);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .beast-info-blob::after {
+      content: '';
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+    }
+
+    .beast-info-text h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .beast-info-text p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    .beast-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .stat-bar {
+      height: 12px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      overflow: hidden;
+      outline: 2px solid var(--outline);
+    }
+
+    .stat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .stat-fill.health { background: var(--lime); }
+    .stat-fill.speed { background: var(--cyan); }
+    .stat-fill.power { background: var(--orange); }
+    .stat-fill.weight { background: var(--purple); }
+
+    .ability-box {
+      background: rgba(107, 47, 187, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      outline: 3px solid var(--purple);
+    }
+
+    .ability-name {
+      font-weight: 600;
+      color: var(--purple);
+      margin-bottom: 4px;
+    }
+
+    .ability-desc {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    /* Controls panel */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      background: var(--bg-dark);
+      border-radius: 12px;
+      outline: 3px solid var(--outline);
+    }
+
+    .keys {
+      display: flex;
+      gap: 4px;
+    }
+
+    .key {
+      min-width: 40px;
+      height: 40px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      outline: 3px solid var(--outline);
+      box-shadow: 0 4px 0 var(--outline);
+    }
+
+    .key.wide { min-width: 80px; }
+
+    .control-label {
+      font-size: 1rem;
+      color: var(--text-dim);
+    }
+
+    /* Play section */
+    .play-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+    }
+
+    .status-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--danger);
+      outline: 3px solid var(--outline);
+    }
+
+    .status-dot.online { background: var(--accent); }
+
+    .server-hint {
+      background: rgba(197, 17, 17, 0.2);
+      border-radius: 12px;
+      padding: 16px 24px;
+      outline: 3px solid var(--danger);
+      color: #ff8888;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .server-hint.visible { display: block; }
+
+    .server-hint code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* ============================================ */
+    /* MATCHMAKING SCREEN */
+    /* ============================================ */
+    #matchmaking-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 55;
+    }
+
+    #matchmaking-screen.visible { display: flex; }
+
+    .matchmaking-content {
+      text-align: center;
+      max-width: 400px;
+    }
+
+    .matchmaking-blob {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      margin: 0 auto 30px;
+      outline: 6px solid var(--outline);
+      position: relative;
+      animation: beastBounce 1s ease-in-out infinite;
+    }
+
+    .matchmaking-blob::after {
+      content: '';
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 35px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+    }
+
+    .matchmaking-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-shadow: 3px 3px 0 var(--outline);
+    }
+
+    .matchmaking-subtitle {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+    }
+
+    .matchmaking-count {
+      font-size: 4rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-shadow: 4px 4px 0 var(--outline);
+      margin-bottom: 8px;
+    }
+
+    .matchmaking-status {
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .matchmaking-bar {
+      width: 100%;
+      height: 20px;
+      background: var(--bg-card);
+      border-radius: 10px;
+      outline: 4px solid var(--outline);
+      overflow: hidden;
+      margin-bottom: 30px;
+    }
+
+    .matchmaking-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      border-radius: 8px;
+      transition: width 0.3s ease;
+    }
+
+    .tip-box {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 30px;
+      outline: 4px solid var(--outline);
+    }
+
+    .tip-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .tip-text {
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    /* ============================================ */
+    /* HUD */
+    /* ============================================ */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+    }
+
+    #hud.visible { display: block; }
+
+    .hud-top {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .hud-players {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 12px 20px;
+      outline: 4px solid var(--outline);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-players-icon {
+      font-size: 1.5rem;
+    }
+
+    .hud-players-count {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .hud-timer {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 12px 24px;
+      outline: 4px solid var(--outline);
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .announcement {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 12px 32px;
+      outline: 4px solid var(--outline);
+      font-size: 1.2rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .announcement.visible { opacity: 1; }
+    .announcement.chaos { outline-color: var(--purple); background: rgba(107, 47, 187, 0.8); }
+    .announcement.death { outline-color: var(--danger); background: rgba(197, 17, 17, 0.8); }
+    .announcement.victory { outline-color: var(--accent); background: rgba(80, 239, 57, 0.8); color: var(--outline); }
+
+    .hud-bottom {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: flex-end;
+      gap: 20px;
+    }
+
+    .hud-health {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 12px 20px;
+      outline: 4px solid var(--outline);
+    }
+
+    .health-bar {
+      width: 240px;
+      height: 24px;
+      background: var(--bg-dark);
+      border-radius: 12px;
+      overflow: hidden;
+      outline: 3px solid var(--outline);
+      margin-bottom: 6px;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 10px;
+      transition: width 0.2s ease;
+    }
+
+    .health-fill.low { background: var(--danger); }
+
+    .health-text {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .hud-abilities {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ability-btn {
+      width: 64px;
+      height: 64px;
+      background: var(--bg-card);
+      border-radius: 16px;
+      outline: 4px solid var(--outline);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .ability-btn.ready {
+      outline-color: var(--accent);
+      box-shadow: 0 0 20px rgba(80, 239, 57, 0.5);
+    }
+
+    .ability-icon { font-size: 1.5rem; }
+    .ability-key { font-size: 0.7rem; color: var(--text-dim); font-weight: 700; }
+
+    .controls-hint {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      padding: 10px 20px;
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .controls-hint .key {
+      min-width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
+      box-shadow: 0 3px 0 var(--outline);
+    }
+
+    /* ============================================ */
+    /* RESULTS SCREEN */
+    /* ============================================ */
+    #results-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+    }
+
+    #results-screen.visible { display: flex; }
+
+    .results-content {
+      text-align: center;
+      max-width: 450px;
+      padding: 20px;
+    }
+
+    .results-placement {
+      font-size: 1.5rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .results-title {
+      font-size: 4rem;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-shadow: 4px 4px 0 var(--outline);
+    }
+
+    .results-title.winner { color: var(--yellow); }
+
+    .results-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      outline: 4px solid var(--outline);
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+
+    .stat-card-label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .xp-box {
+      background: linear-gradient(135deg, var(--purple), #9333ea);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+      outline: 4px solid var(--outline);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .results-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .results-buttons .btn {
+      pointer-events: auto;
+    }
+
+    /* ============================================ */
+    /* RESPONSIVE */
+    /* ============================================ */
+    @media (max-width: 600px) {
+      .logo { font-size: 2.5rem; }
+      .menu-logo { font-size: 2rem; }
+      .beast-grid { grid-template-columns: repeat(3, 1fr); }
+      .controls-grid { grid-template-columns: 1fr; }
+      .btn-giant { padding: 16px 40px; font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="logo-container">
+        <div class="logo">
+          <span class="logo-beast">Beast</span> <span class="logo-royale">Royale</span>
+        </div>
+      </div>
+      <div class="loading-beasts">
+        <div class="loading-beast"></div>
+        <div class="loading-beast"></div>
+        <div class="loading-beast"></div>
+        <div class="loading-beast"></div>
+        <div class="loading-beast"></div>
+      </div>
+      <div class="loading-bar-container">
+        <div class="loading-bar" id="loading-bar"></div>
+      </div>
+      <div class="loading-text" id="loading-text">Loading...</div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu">
+      <div class="menu-container">
+        <div class="menu-logo">
+          <span class="logo-beast">Beast</span> <span class="logo-royale">Royale</span>
+        </div>
+
+        <!-- Name Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-icon" style="background: var(--blue);">👤</div>
+            <div class="panel-title">Your Name</div>
+          </div>
+          <div class="name-row">
+            <input type="text" class="name-input" id="name-input" placeholder="Enter name..." maxlength="16">
+            <button class="dice-btn" id="randomize-name">🎲</button>
+          </div>
+        </div>
+
+        <!-- Beast Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-icon" style="background: var(--pink);">🐾</div>
+            <div class="panel-title">Choose Beast</div>
+          </div>
+          <div class="beast-grid" id="beast-selector"></div>
+          <div class="beast-info" id="beast-info">
+            <div class="beast-info-header">
+              <div class="beast-info-blob" id="beast-info-blob"></div>
+              <div class="beast-info-text">
+                <h3 id="beast-info-name">Beast Name</h3>
+                <p id="beast-info-type">Type</p>
+              </div>
+            </div>
+            <div class="beast-stats">
+              <div class="stat-item">
+                <div class="stat-label">Health</div>
+                <div class="stat-bar"><div class="stat-fill health" id="stat-health"></div></div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Speed</div>
+                <div class="stat-bar"><div class="stat-fill speed" id="stat-speed"></div></div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Power</div>
+                <div class="stat-bar"><div class="stat-fill power" id="stat-power"></div></div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Weight</div>
+                <div class="stat-bar"><div class="stat-fill weight" id="stat-weight"></div></div>
+              </div>
+            </div>
+            <div class="ability-box">
+              <div class="ability-name" id="ability-name">Special Ability</div>
+              <div class="ability-desc" id="ability-desc">Description</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-icon" style="background: var(--orange);">🎮</div>
+            <div class="panel-title">Controls</div>
+          </div>
+          <div class="controls-grid">
+            <div class="control-item">
+              <div class="keys">
+                <div class="key">W</div>
+                <div class="key">A</div>
+                <div class="key">S</div>
+                <div class="key">D</div>
+              </div>
+              <div class="control-label">Move</div>
+            </div>
+            <div class="control-item">
+              <div class="keys"><div class="key wide">SPACE</div></div>
+              <div class="control-label">Attack</div>
+            </div>
+            <div class="control-item">
+              <div class="keys"><div class="key">Q</div></div>
+              <div class="control-label">Special</div>
+            </div>
+            <div class="control-item">
+              <div class="keys"><div class="key">P</div></div>
+              <div class="control-label">Panic!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Play Section -->
+        <div class="play-section">
+          <button class="btn btn-green btn-giant" id="play-button">PLAY</button>
+          <div class="server-status">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Connecting...</span>
+          </div>
+          <div class="server-hint" id="server-hint">
+            Server offline! Run <code>npm run dev:server</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="hud-players">
+          <span class="hud-players-icon">👥</span>
+          <span class="hud-players-count" id="players-remaining">5</span>
+        </div>
+        <div class="hud-timer" id="match-time">0:00</div>
+      </div>
+
+      <div class="announcement" id="announcement"></div>
+
+      <div class="hud-bottom">
+        <div class="hud-health">
+          <div class="health-bar">
+            <div class="health-fill" id="health-bar"></div>
+          </div>
+          <div class="health-text"><span id="health-current">100</span> / <span id="health-max">100</span></div>
+        </div>
+        <div class="hud-abilities">
+          <div class="ability-btn" id="attack-indicator">
+            <span class="ability-icon">⚔️</span>
+            <span class="ability-key">SPACE</span>
+          </div>
+          <div class="ability-btn" id="ability-indicator">
+            <span class="ability-icon">✨</span>
+            <span class="ability-key">Q</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-hint">
+        <span><div class="key">W</div><div class="key">A</div><div class="key">S</div><div class="key">D</div> Move</span>
+        <span><div class="key wide">SPACE</div> Attack</span>
+        <span><div class="key">Q</div> Special</span>
+      </div>
+    </div>
+
+    <!-- Matchmaking -->
+    <div id="matchmaking-screen">
+      <div class="matchmaking-content">
+        <div class="matchmaking-blob" id="matchmaking-blob"></div>
+        <div class="matchmaking-title" id="matchmaking-title">Finding Match</div>
+        <div class="matchmaking-subtitle">Get ready to rumble!</div>
+        <div class="matchmaking-count" id="matchmaking-players">1/9</div>
+        <div class="matchmaking-status" id="matchmaking-status">Searching...</div>
+        <div class="matchmaking-bar">
+          <div class="matchmaking-bar-fill" id="matchmaking-bar"></div>
+        </div>
+        <div class="tip-box">
+          <div class="tip-label">💡 Tip</div>
+          <div class="tip-text" id="matchmaking-tip">Knock enemies off the edge to eliminate them!</div>
+        </div>
+        <button class="btn btn-red btn-medium" id="cancel-matchmaking">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-screen">
+      <div class="results-content">
+        <div class="results-placement" id="result-placement">#1</div>
+        <div class="results-title" id="result-title">VICTORY!</div>
+        <div class="results-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-eliminations">0</div>
+            <div class="stat-card-label">Eliminations</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-time">0:00</div>
+            <div class="stat-card-label">Survived</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-damage">0</div>
+            <div class="stat-card-label">Damage</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-chaos">0</div>
+            <div class="stat-card-label">Chaos</div>
+          </div>
+        </div>
+        <div class="xp-box" id="stat-xp">+100 XP</div>
+        <div class="results-buttons">
+          <button class="btn btn-green btn-large" id="play-again-btn">Play Again</button>
+          <button class="btn btn-gray btn-large" id="main-menu-btn">Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
