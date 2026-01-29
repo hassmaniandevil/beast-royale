@@ -7,6 +7,7 @@ import { Renderer } from './renderer';
 import { InputManager } from './input';
 import { NetworkManager } from './network';
 import { UIManager } from './ui';
+import { audio } from './audio';
 import {
   MatchState,
   PlayerState,
@@ -129,6 +130,8 @@ export class Game {
     if (mainMenu) {
       mainMenu.classList.add('visible');
     }
+    // Play menu music
+    audio.startMusic(3); // Menu Chill track
   }
 
   private hideMenu(): void {
@@ -202,19 +205,24 @@ export class Game {
   // PUBLIC API
   // ============================================
 
-  play(): void {
+  async play(): Promise<void> {
     if (this.state !== 'menu') return;
+
+    // Initialize audio on first interaction (browser requirement)
+    await audio.init();
 
     // Check if connected to server
     if (!this.network?.isConnected()) {
       if (this.ui) {
         this.ui.showAnnouncement('Server offline! Start the server first.', 'warning');
       }
+      audio.playSound('defeat');
       return;
     }
 
     console.log(`[Game] Starting game with beast: ${this.selectedBeast}`);
 
+    audio.playSound('click');
     this.state = 'matchmaking';
     this.hideMenu();
 
@@ -230,6 +238,7 @@ export class Game {
 
   selectBeast(beastId: string): void {
     this.selectedBeast = beastId;
+    audio.playSound('select');
     if (this.ui) {
       this.ui.updateBeastSelection(beastId);
     }
@@ -250,6 +259,8 @@ export class Game {
   panic(): void {
     if (this.state !== 'playing' || !this.network) return;
     this.network.sendPanic();
+    // Play panic sound with random variation
+    audio.playSound('panic', Math.random());
     // Show visual panic effect
     if (this.ui) {
       this.ui.showPanicEffect();
@@ -308,6 +319,7 @@ export class Game {
           );
           if (message.data.countdown <= 3000) {
             this.ui.showMatchFound(message.data.countdown);
+            audio.playSound('countdown');
           }
         }
         break;
@@ -316,6 +328,8 @@ export class Game {
         // Update playerId to match the one assigned by the server for this match
         this.playerId = message.data.playerId;
         console.log(`[Game] Match starting! Player ID: ${this.playerId}`);
+        audio.playSound('match_start');
+        audio.startMusic(0); // Battle Theme
         break;
 
       case 'snapshot':
@@ -328,8 +342,10 @@ export class Game {
 
       case 'death':
         console.log(`[Game] Player died: ${message.data.victimName}`);
+        audio.playSound('death');
         if (message.data.victimId === this.playerId) {
           this.state = 'spectating';
+          audio.playSound('defeat');
         }
         break;
 
@@ -337,10 +353,16 @@ export class Game {
         if (this.ui) {
           this.ui.showAnnouncement(message.data.text, message.data.type);
         }
+        // Play zone warning for zone announcements
+        if (message.data.type === 'warning') {
+          audio.playSound('zone_warning');
+        }
         break;
 
       case 'chaos':
         console.log(`[Game] Chaos event: ${message.data.type}`);
+        audio.playSound('chaos_event');
+        audio.startMusic(1); // Switch to Chaos Mode music
         break;
 
       case 'end':
@@ -387,6 +409,14 @@ export class Game {
 
     if (this.input) {
       this.input.disable();
+    }
+
+    // Play victory or defeat sound based on placement
+    if (data.yourStats?.placement === 1) {
+      audio.playSound('victory');
+      audio.startMusic(4); // Victory fanfare
+    } else {
+      audio.playSound('defeat');
     }
 
     if (this.ui) {

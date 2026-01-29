@@ -5,6 +5,7 @@
 import { MatchState, PlayerState, STARTER_BEASTS, BEASTS, getBeast, ARENAS, VentState, PowerUpState } from '@beast-royale/shared';
 import { Game } from './game';
 import { drawBeastIcon } from './beast-icons';
+import { audio } from './audio';
 
 // Beast color mappings (Among Us style)
 const BEAST_COLORS: Record<string, string> = {
@@ -64,6 +65,7 @@ export class UIManager {
     const playAgainBtn = document.getElementById('play-again-btn');
     if (playAgainBtn) {
       playAgainBtn.addEventListener('click', () => {
+        audio.playSound('click');
         this.game.playAgain();
       });
     }
@@ -72,6 +74,7 @@ export class UIManager {
     const mainMenuBtn = document.getElementById('main-menu-btn');
     if (mainMenuBtn) {
       mainMenuBtn.addEventListener('click', () => {
+        audio.playSound('click');
         this.game.playAgain();
       });
     }
@@ -80,9 +83,15 @@ export class UIManager {
     const cancelBtn = document.getElementById('cancel-matchmaking');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
+        audio.playSound('click');
         this.game.cancelMatchmaking();
       });
     }
+
+    // Add hover sounds to all buttons
+    document.querySelectorAll('button, .beast-card, .arena-card').forEach(el => {
+      el.addEventListener('mouseenter', () => audio.playSound('hover'));
+    });
   }
 
   private setupNameInput(): void {

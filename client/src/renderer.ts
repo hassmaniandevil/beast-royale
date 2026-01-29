@@ -30,6 +30,7 @@ import {
   DoorState,
   EffectZoneState,
 } from '@beast-royale/shared';
+import { audio } from './audio';
 
 // ============================================
 // PARTICLE SYSTEM
@@ -2369,6 +2370,9 @@ export class Renderer {
     const angle = player.facingAngle;
     const range = 90;
 
+    // Play attack sound
+    audio.playSound('attack', Math.random());
+
     // Screen shake for attack feedback
     this.triggerScreenShake(4);
 
@@ -2431,6 +2435,9 @@ export class Renderer {
     const palette = BEAST_PALETTES[player.beastId] || BEAST_PALETTES.rock_tortoise;
     const beast = getBeast(player.beastId);
 
+    // Play ability sound
+    audio.playSound('ability');
+
     // Screen shake for ability
     this.triggerScreenShake(5);
 
@@ -2473,6 +2480,9 @@ export class Renderer {
 
   private spawnDeathEffect(position: Vector2, beastId: string): void {
     const palette = BEAST_PALETTES[beastId] || BEAST_PALETTES.rock_tortoise;
+
+    // Play death sound
+    audio.playSound('explosion');
 
     // Big burst of particles
     this.particles.burst(position.x, position.y, palette.primary, 30);
