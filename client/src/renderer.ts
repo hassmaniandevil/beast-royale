@@ -860,104 +860,1485 @@ export class Renderer {
   private drawBeastBody(g: Graphics, beastId: string, palette: { primary: number; secondary: number; accent: number; eye: number }): void {
     const p = palette;
 
-    // Among Us style blob body - simple capsule/bean shape
-    const bodyWidth = 28;
-    const bodyHeight = 32;
+    // Draw creature-specific body while keeping cute blob style
+    switch (beastId) {
+      case 'rock_tortoise':
+        this.drawTortoise(g, p);
+        break;
+      case 'honk_goose':
+        this.drawGoose(g, p);
+        break;
+      case 'stretchy_ferret':
+        this.drawFerret(g, p);
+        break;
+      case 'boom_frog':
+        this.drawFrog(g, p);
+        break;
+      case 'punch_crab':
+        this.drawCrab(g, p);
+        break;
+      case 'sleepy_bear':
+      case 'thunder_bear':
+        this.drawBear(g, p);
+        break;
+      case 'mirror_monkey':
+        this.drawMonkey(g, p);
+        break;
+      case 'glass_rhino':
+        this.drawRhino(g, p);
+        break;
+      case 'panic_octopus':
+        this.drawOctopus(g, p);
+        break;
+      case 'unicycle_giraffe':
+        this.drawGiraffe(g, p);
+        break;
+      case 'electric_eel':
+        this.drawEel(g, p);
+        break;
+      case 'pigeon_king':
+        this.drawPigeon(g, p);
+        break;
+      case 'screaming_goat':
+        this.drawGoat(g, p);
+        break;
+      case 'slime_cow':
+        this.drawCow(g, p);
+        break;
+      case 'cactus_cat':
+      case 'laser_cat':
+        this.drawCat(g, p, beastId === 'laser_cat');
+        break;
+      case 'time_hamster':
+        this.drawHamster(g, p);
+        break;
+      case 'tax_evasion_raccoon':
+        this.drawRaccoon(g, p);
+        break;
+      case 'cosmic_duck':
+        this.drawDuck(g, p);
+        break;
+      case 'reality_dog':
+        this.drawDog(g, p);
+        break;
+      case 'the_human':
+        this.drawHuman(g, p);
+        break;
+      case 'bouncy_bunny':
+        this.drawBunny(g, p);
+        break;
+      case 'ninja_squirrel':
+        this.drawSquirrel(g, p);
+        break;
+      case 'rocket_penguin':
+        this.drawPenguin(g, p);
+        break;
+      case 'sonic_bat':
+        this.drawBat(g, p);
+        break;
+      case 'bubble_fish':
+        this.drawFish(g, p);
+        break;
+      case 'ghost_fox':
+        this.drawFox(g, p);
+        break;
+      case 'magnet_mole':
+        this.drawMole(g, p);
+        break;
+      case 'disco_peacock':
+        this.drawPeacock(g, p);
+        break;
+      default:
+        this.drawDefaultBlob(g, p);
+    }
+  }
 
-    // Main body (capsule shape)
-    g.roundRect(-bodyWidth, -bodyHeight, bodyWidth * 2, bodyHeight * 2, bodyWidth);
-    g.fill({ color: p.primary });
+  // Helper to draw cute eyes
+  private drawCuteEyes(g: Graphics, x: number, y: number, size: number, eyeColor: number, angry = false): void {
+    // Left eye
+    g.circle(x - size * 0.8, y, size);
+    g.fill({ color: 0xffffff });
+    g.circle(x - size * 0.8, y, size);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(x - size * 0.8 + size * 0.2, y + (angry ? -1 : 1), size * 0.5);
+    g.fill({ color: eyeColor });
+    g.circle(x - size * 0.8 + size * 0.3, y - size * 0.2, size * 0.2);
+    g.fill({ color: 0xffffff });
 
-    // Thick black outline (Among Us signature style)
-    g.roundRect(-bodyWidth, -bodyHeight, bodyWidth * 2, bodyHeight * 2, bodyWidth);
-    g.stroke({ color: 0x000000, width: 5 });
+    // Right eye
+    g.circle(x + size * 0.8, y, size);
+    g.fill({ color: 0xffffff });
+    g.circle(x + size * 0.8, y, size);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(x + size * 0.8 + size * 0.2, y + (angry ? -1 : 1), size * 0.5);
+    g.fill({ color: eyeColor });
+    g.circle(x + size * 0.8 + size * 0.3, y - size * 0.2, size * 0.2);
+    g.fill({ color: 0xffffff });
 
-    // Highlight shine (top-left area)
-    g.ellipse(-bodyWidth * 0.3, -bodyHeight * 0.4, bodyWidth * 0.5, bodyHeight * 0.35);
-    g.fill({ color: 0xffffff, alpha: 0.3 });
+    // Angry eyebrows
+    if (angry) {
+      g.moveTo(x - size * 1.5, y - size * 1.2);
+      g.lineTo(x - size * 0.2, y - size * 0.8);
+      g.stroke({ color: 0x000000, width: 3 });
+      g.moveTo(x + size * 1.5, y - size * 1.2);
+      g.lineTo(x + size * 0.2, y - size * 0.8);
+      g.stroke({ color: 0x000000, width: 3 });
+    }
+  }
 
-    // Small backpack/detail on back (Among Us style)
-    g.roundRect(-bodyWidth - 8, -5, 12, 20, 5);
+  private drawTortoise(g: Graphics, p: any): void {
+    // Shell (dome shape)
+    g.ellipse(0, 5, 32, 25);
     g.fill({ color: p.secondary });
-    g.roundRect(-bodyWidth - 8, -5, 12, 20, 5);
+    g.ellipse(0, 5, 32, 25);
     g.stroke({ color: 0x000000, width: 4 });
-
-    // Visor/face plate area
-    g.ellipse(bodyWidth * 0.1, -bodyHeight * 0.2, bodyWidth * 0.6, bodyHeight * 0.35);
-    g.fill({ color: 0x67e8f9 }); // Cyan visor
-    g.ellipse(bodyWidth * 0.1, -bodyHeight * 0.2, bodyWidth * 0.6, bodyHeight * 0.35);
+    // Shell pattern
+    g.ellipse(0, 0, 18, 12);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(-12, 8, 8, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(12, 8, 8, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Head
+    g.circle(0, -25, 18);
+    g.fill({ color: p.primary });
+    g.circle(0, -25, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Eyes
+    this.drawCuteEyes(g, 0, -28, 6, p.eye);
+    // Cute smile
+    g.arc(0, -20, 8, 0.2, Math.PI - 0.2);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Feet
+    g.ellipse(-22, 25, 10, 6);
+    g.fill({ color: p.primary });
+    g.ellipse(-22, 25, 10, 6);
     g.stroke({ color: 0x000000, width: 3 });
+    g.ellipse(22, 25, 10, 6);
+    g.fill({ color: p.primary });
+    g.ellipse(22, 25, 10, 6);
+    g.stroke({ color: 0x000000, width: 3 });
+  }
 
-    // Visor shine
-    g.ellipse(bodyWidth * 0.25, -bodyHeight * 0.35, bodyWidth * 0.2, bodyHeight * 0.12);
+  private drawGoose(g: Graphics, p: any): void {
+    // Body (plump)
+    g.ellipse(0, 10, 26, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 26, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Long neck
+    g.roundRect(-8, -40, 16, 45, 8);
+    g.fill({ color: p.primary });
+    g.roundRect(-8, -40, 16, 45, 8);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -48, 14);
+    g.fill({ color: p.primary });
+    g.circle(0, -48, 14);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Orange beak
+    g.moveTo(14, -50);
+    g.lineTo(28, -46);
+    g.lineTo(14, -42);
+    g.closePath();
+    g.fill({ color: 0xf97316 });
+    g.moveTo(14, -50);
+    g.lineTo(28, -46);
+    g.lineTo(14, -42);
+    g.closePath();
+    g.stroke({ color: 0x000000, width: 3 });
+    // Angry eyes
+    this.drawCuteEyes(g, 2, -52, 5, p.eye, true);
+    // Wing
+    g.ellipse(-18, 8, 12, 18);
+    g.fill({ color: p.secondary });
+    g.ellipse(-18, 8, 12, 18);
+    g.stroke({ color: 0x000000, width: 3 });
+  }
+
+  private drawFerret(g: Graphics, p: any): void {
+    // Long body
+    g.roundRect(-35, -5, 70, 30, 15);
+    g.fill({ color: p.primary });
+    g.roundRect(-35, -5, 70, 30, 15);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.ellipse(25, -5, 18, 16);
+    g.fill({ color: p.primary });
+    g.ellipse(25, -5, 18, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Mask marking
+    g.ellipse(30, -5, 10, 8);
+    g.fill({ color: p.secondary });
+    // Small ears
+    g.ellipse(18, -18, 6, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(18, -18, 6, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(32, -18, 6, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(32, -18, 6, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes
+    this.drawCuteEyes(g, 30, -8, 5, p.eye);
+    // Nose
+    g.circle(40, -3, 4);
+    g.fill({ color: 0x000000 });
+    // Tail
+    g.roundRect(-50, 5, 20, 12, 6);
+    g.fill({ color: p.primary });
+    g.roundRect(-50, 5, 20, 12, 6);
+    g.stroke({ color: 0x000000, width: 3 });
+  }
+
+  private drawFrog(g: Graphics, p: any): void {
+    // Body (wide and squat)
+    g.ellipse(0, 10, 30, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 30, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Big bulging eyes
+    g.circle(-12, -15, 14);
+    g.fill({ color: p.primary });
+    g.circle(-12, -15, 14);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.circle(12, -15, 14);
+    g.fill({ color: p.primary });
+    g.circle(12, -15, 14);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Eye whites and pupils
+    g.circle(-12, -17, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(-12, -17, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-10, -16, 5);
+    g.fill({ color: p.eye });
+    g.circle(12, -17, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(12, -17, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(14, -16, 5);
+    g.fill({ color: p.eye });
+    // Wide mouth
+    g.arc(0, 12, 20, 0, Math.PI);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Belly
+    g.ellipse(0, 15, 18, 14);
+    g.fill({ color: p.accent });
+    // Legs
+    g.ellipse(-28, 25, 12, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(-28, 25, 12, 8);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.ellipse(28, 25, 12, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(28, 25, 12, 8);
+    g.stroke({ color: 0x000000, width: 3 });
+  }
+
+  private drawCrab(g: Graphics, p: any): void {
+    // Body (wide)
+    g.ellipse(0, 5, 28, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 5, 28, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Eyes on stalks
+    g.roundRect(-10, -25, 6, 15, 3);
+    g.fill({ color: p.primary });
+    g.roundRect(-10, -25, 6, 15, 3);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.roundRect(4, -25, 6, 15, 3);
+    g.fill({ color: p.primary });
+    g.roundRect(4, -25, 6, 15, 3);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-7, -28, 6);
+    g.fill({ color: 0xffffff });
+    g.circle(-7, -28, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-6, -27, 3);
+    g.fill({ color: p.eye });
+    g.circle(7, -28, 6);
+    g.fill({ color: 0xffffff });
+    g.circle(7, -28, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(8, -27, 3);
+    g.fill({ color: p.eye });
+    // Big claws
+    g.ellipse(-42, -5, 16, 12);
+    g.fill({ color: p.primary });
+    g.ellipse(-42, -5, 16, 12);
+    g.stroke({ color: 0x000000, width: 4 });
+    g.ellipse(-48, -12, 8, 10);
+    g.fill({ color: p.primary });
+    g.ellipse(-48, -12, 8, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.ellipse(42, -5, 16, 12);
+    g.fill({ color: p.primary });
+    g.ellipse(42, -5, 16, 12);
+    g.stroke({ color: 0x000000, width: 4 });
+    g.ellipse(48, -12, 8, 10);
+    g.fill({ color: p.primary });
+    g.ellipse(48, -12, 8, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Legs
+    for (let i = -1; i <= 1; i += 2) {
+      g.moveTo(i * 20, 15);
+      g.lineTo(i * 30, 28);
+      g.stroke({ color: p.secondary, width: 5 });
+      g.stroke({ color: 0x000000, width: 2 });
+    }
+  }
+
+  private drawBear(g: Graphics, p: any): void {
+    // Big round body
+    g.circle(0, 8, 30);
+    g.fill({ color: p.primary });
+    g.circle(0, 8, 30);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -25, 22);
+    g.fill({ color: p.primary });
+    g.circle(0, -25, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Round ears
+    g.circle(-18, -42, 10);
+    g.fill({ color: p.primary });
+    g.circle(-18, -42, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.circle(-18, -42, 5);
+    g.fill({ color: p.secondary });
+    g.circle(18, -42, 10);
+    g.fill({ color: p.primary });
+    g.circle(18, -42, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.circle(18, -42, 5);
+    g.fill({ color: p.secondary });
+    // Snout
+    g.ellipse(0, -18, 12, 10);
+    g.fill({ color: p.accent });
+    g.ellipse(0, -18, 12, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Nose
+    g.ellipse(0, -20, 6, 4);
+    g.fill({ color: 0x000000 });
+    // Sleepy/cute eyes
+    this.drawCuteEyes(g, 0, -30, 5, p.eye);
+    // Belly
+    g.ellipse(0, 12, 18, 16);
+    g.fill({ color: p.accent });
+  }
+
+  private drawMonkey(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 8, 24, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 24, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -22, 20);
+    g.fill({ color: p.primary });
+    g.circle(0, -22, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Face (lighter)
+    g.ellipse(0, -18, 14, 12);
+    g.fill({ color: p.accent });
+    // Big ears
+    g.circle(-22, -22, 10);
+    g.fill({ color: p.primary });
+    g.circle(-22, -22, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.circle(-22, -22, 5);
+    g.fill({ color: p.accent });
+    g.circle(22, -22, 10);
+    g.fill({ color: p.primary });
+    g.circle(22, -22, 10);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.circle(22, -22, 5);
+    g.fill({ color: p.accent });
+    // Eyes
+    this.drawCuteEyes(g, 0, -25, 5, p.eye);
+    // Curly tail
+    g.arc(-30, 15, 15, -Math.PI / 2, Math.PI);
+    g.stroke({ color: p.secondary, width: 6 });
+    g.arc(-30, 15, 15, -Math.PI / 2, Math.PI);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawRhino(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 8, 30, 24);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 30, 24);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.ellipse(20, -10, 22, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(20, -10, 22, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Horn
+    g.moveTo(40, -20);
+    g.lineTo(50, -35);
+    g.lineTo(38, -15);
+    g.closePath();
+    g.fill({ color: p.accent });
+    g.moveTo(40, -20);
+    g.lineTo(50, -35);
+    g.lineTo(38, -15);
+    g.closePath();
+    g.stroke({ color: 0x000000, width: 3 });
+    // Small ears
+    g.ellipse(8, -25, 6, 10);
+    g.fill({ color: p.primary });
+    g.ellipse(8, -25, 6, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes
+    g.circle(28, -15, 6);
+    g.fill({ color: 0xffffff });
+    g.circle(28, -15, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(29, -14, 3);
+    g.fill({ color: p.eye });
+    // Legs
+    g.roundRect(-20, 25, 14, 12, 5);
+    g.fill({ color: p.primary });
+    g.roundRect(-20, 25, 14, 12, 5);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.roundRect(6, 25, 14, 12, 5);
+    g.fill({ color: p.primary });
+    g.roundRect(6, 25, 14, 12, 5);
+    g.stroke({ color: 0x000000, width: 3 });
+  }
+
+  private drawOctopus(g: Graphics, p: any): void {
+    // Tentacles first (behind body)
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI + Math.PI / 6;
+      const x = Math.cos(angle) * 25;
+      const y = 15 + Math.sin(angle) * 15;
+      g.roundRect(x - 5, y, 10, 25, 5);
+      g.fill({ color: p.secondary });
+      g.roundRect(x - 5, y, 10, 25, 5);
+      g.stroke({ color: 0x000000, width: 2 });
+    }
+    // Round body/head
+    g.ellipse(0, -5, 28, 32);
+    g.fill({ color: p.primary });
+    g.ellipse(0, -5, 28, 32);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Big worried eyes
+    g.circle(-10, -12, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(-10, -12, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-8, -10, 5);
+    g.fill({ color: p.eye });
+    g.circle(10, -12, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(10, -12, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(12, -10, 5);
+    g.fill({ color: p.eye });
+    // Worried eyebrows
+    g.moveTo(-18, -22);
+    g.lineTo(-5, -18);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(18, -22);
+    g.lineTo(5, -18);
+    g.stroke({ color: 0x000000, width: 2 });
+    // O mouth
+    g.circle(0, 5, 6);
+    g.fill({ color: p.secondary });
+    g.circle(0, 5, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawGiraffe(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 15, 22, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 15, 22, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Spots
+    g.circle(-8, 12, 5);
+    g.fill({ color: p.secondary });
+    g.circle(8, 18, 4);
+    g.fill({ color: p.secondary });
+    // Long neck
+    g.roundRect(-8, -45, 16, 55, 8);
+    g.fill({ color: p.primary });
+    g.roundRect(-8, -45, 16, 55, 8);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Spots on neck
+    g.circle(-2, -20, 4);
+    g.fill({ color: p.secondary });
+    g.circle(3, -35, 3);
+    g.fill({ color: p.secondary });
+    // Head
+    g.ellipse(0, -55, 14, 12);
+    g.fill({ color: p.primary });
+    g.ellipse(0, -55, 14, 12);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Ossicones (horns)
+    g.roundRect(-10, -72, 6, 14, 3);
+    g.fill({ color: p.secondary });
+    g.roundRect(-10, -72, 6, 14, 3);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-7, -74, 4);
+    g.fill({ color: p.secondary });
+    g.circle(-7, -74, 4);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.roundRect(4, -72, 6, 14, 3);
+    g.fill({ color: p.secondary });
+    g.roundRect(4, -72, 6, 14, 3);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(7, -74, 4);
+    g.fill({ color: p.secondary });
+    g.circle(7, -74, 4);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes
+    this.drawCuteEyes(g, 0, -58, 4, p.eye);
+  }
+
+  private drawEel(g: Graphics, p: any): void {
+    // Long wavy body
+    g.moveTo(-40, 0);
+    g.bezierCurveTo(-30, -15, -10, 15, 0, 0);
+    g.bezierCurveTo(10, -15, 30, 15, 40, 0);
+    g.lineTo(40, 15);
+    g.bezierCurveTo(30, 30, 10, 0, 0, 15);
+    g.bezierCurveTo(-10, 30, -30, 0, -40, 15);
+    g.closePath();
+    g.fill({ color: p.primary });
+    g.moveTo(-40, 0);
+    g.bezierCurveTo(-30, -15, -10, 15, 0, 0);
+    g.bezierCurveTo(10, -15, 30, 15, 40, 0);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.ellipse(40, 7, 16, 14);
+    g.fill({ color: p.primary });
+    g.ellipse(40, 7, 16, 14);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Electric sparks
+    g.moveTo(-30, -8);
+    g.lineTo(-25, -15);
+    g.lineTo(-20, -5);
+    g.stroke({ color: p.accent, width: 3 });
+    g.moveTo(10, -8);
+    g.lineTo(15, -18);
+    g.lineTo(20, -5);
+    g.stroke({ color: p.accent, width: 3 });
+    // Eyes
+    this.drawCuteEyes(g, 42, 3, 5, p.eye);
+    // Tail fin
+    g.moveTo(-40, 7);
+    g.lineTo(-55, 0);
+    g.lineTo(-55, 15);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawPigeon(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 8, 24, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 24, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -18, 16);
+    g.fill({ color: p.primary });
+    g.circle(0, -18, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Crown!
+    g.moveTo(-8, -38);
+    g.lineTo(-5, -45);
+    g.lineTo(0, -38);
+    g.lineTo(5, -48);
+    g.lineTo(8, -38);
+    g.closePath();
+    g.fill({ color: 0xffd700 });
+    g.moveTo(-8, -38);
+    g.lineTo(-5, -45);
+    g.lineTo(0, -38);
+    g.lineTo(5, -48);
+    g.lineTo(8, -38);
+    g.closePath();
+    g.stroke({ color: 0x000000, width: 2 });
+    // Beak
+    g.moveTo(10, -18);
+    g.lineTo(22, -16);
+    g.lineTo(10, -14);
+    g.closePath();
+    g.fill({ color: 0xffa500 });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Snobby eyes
+    g.circle(-5, -22, 5);
+    g.fill({ color: 0xffffff });
+    g.circle(-5, -22, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-4, -21, 2);
+    g.fill({ color: p.eye });
+    // Wings
+    g.ellipse(-20, 5, 10, 16);
+    g.fill({ color: p.secondary });
+    g.ellipse(-20, 5, 10, 16);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawGoat(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 10, 26, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 26, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.ellipse(0, -18, 18, 16);
+    g.fill({ color: p.primary });
+    g.ellipse(0, -18, 18, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Horns
+    g.moveTo(-12, -30);
+    g.quadraticCurveTo(-20, -50, -8, -45);
+    g.stroke({ color: p.secondary, width: 6 });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(12, -30);
+    g.quadraticCurveTo(20, -50, 8, -45);
+    g.stroke({ color: p.secondary, width: 6 });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Ears
+    g.ellipse(-16, -22, 8, 5);
+    g.fill({ color: p.primary });
+    g.ellipse(-16, -22, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(16, -22, 8, 5);
+    g.fill({ color: p.primary });
+    g.ellipse(16, -22, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Wide open screaming mouth
+    g.ellipse(0, -8, 10, 8);
+    g.fill({ color: 0x000000 });
+    g.ellipse(0, -10, 6, 4);
+    g.fill({ color: 0xff6b6b });
+    // Crazed eyes
+    this.drawCuteEyes(g, 0, -22, 6, p.eye, true);
+    // Beard
+    g.moveTo(-5, -2);
+    g.lineTo(0, 8);
+    g.lineTo(5, -2);
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawCow(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 8, 28, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 28, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Spots
+    g.ellipse(-10, 5, 8, 6);
+    g.fill({ color: p.secondary });
+    g.ellipse(12, 12, 6, 5);
+    g.fill({ color: p.secondary });
+    // Head
+    g.ellipse(0, -20, 20, 16);
+    g.fill({ color: p.primary });
+    g.ellipse(0, -20, 20, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Snout
+    g.ellipse(0, -12, 14, 10);
+    g.fill({ color: p.accent });
+    g.ellipse(0, -12, 14, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Nostrils
+    g.ellipse(-5, -10, 3, 2);
+    g.fill({ color: p.secondary });
+    g.ellipse(5, -10, 3, 2);
+    g.fill({ color: p.secondary });
+    // Eyes
+    this.drawCuteEyes(g, 0, -25, 5, p.eye);
+    // Horns
+    g.moveTo(-14, -32);
+    g.lineTo(-18, -45);
+    g.stroke({ color: p.accent, width: 5 });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(14, -32);
+    g.lineTo(18, -45);
+    g.stroke({ color: p.accent, width: 5 });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Ears
+    g.ellipse(-18, -25, 8, 5);
+    g.fill({ color: p.primary });
+    g.ellipse(-18, -25, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(18, -25, 8, 5);
+    g.fill({ color: p.primary });
+    g.ellipse(18, -25, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawCat(g: Graphics, p: any, isLaser: boolean): void {
+    // Body
+    g.ellipse(0, 8, 24, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 24, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -18, 18);
+    g.fill({ color: p.primary });
+    g.circle(0, -18, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Pointy ears
+    g.moveTo(-18, -28);
+    g.lineTo(-12, -45);
+    g.lineTo(-6, -28);
+    g.closePath();
+    g.fill({ color: p.primary });
+    g.stroke({ color: 0x000000, width: 3 });
+    g.moveTo(-14, -32);
+    g.lineTo(-12, -40);
+    g.lineTo(-10, -32);
+    g.closePath();
+    g.fill({ color: p.accent });
+    g.moveTo(18, -28);
+    g.lineTo(12, -45);
+    g.lineTo(6, -28);
+    g.closePath();
+    g.fill({ color: p.primary });
+    g.stroke({ color: 0x000000, width: 3 });
+    g.moveTo(14, -32);
+    g.lineTo(12, -40);
+    g.lineTo(10, -32);
+    g.closePath();
+    g.fill({ color: p.accent });
+    // Eyes
+    if (isLaser) {
+      // Glowing laser eyes
+      g.circle(-8, -20, 7);
+      g.fill({ color: 0xff0000 });
+      g.circle(-8, -20, 7);
+      g.stroke({ color: 0x000000, width: 2 });
+      g.circle(-8, -20, 4);
+      g.fill({ color: 0xffffff });
+      g.circle(8, -20, 7);
+      g.fill({ color: 0xff0000 });
+      g.circle(8, -20, 7);
+      g.stroke({ color: 0x000000, width: 2 });
+      g.circle(8, -20, 4);
+      g.fill({ color: 0xffffff });
+    } else {
+      this.drawCuteEyes(g, 0, -22, 6, p.eye);
+    }
+    // Nose
+    g.moveTo(0, -14);
+    g.lineTo(-4, -10);
+    g.lineTo(4, -10);
+    g.closePath();
+    g.fill({ color: p.accent });
+    // Whiskers
+    g.moveTo(-15, -12);
+    g.lineTo(-30, -15);
+    g.stroke({ color: 0x000000, width: 1 });
+    g.moveTo(-15, -10);
+    g.lineTo(-30, -10);
+    g.stroke({ color: 0x000000, width: 1 });
+    g.moveTo(15, -12);
+    g.lineTo(30, -15);
+    g.stroke({ color: 0x000000, width: 1 });
+    g.moveTo(15, -10);
+    g.lineTo(30, -10);
+    g.stroke({ color: 0x000000, width: 1 });
+    // Tail
+    g.moveTo(-20, 15);
+    g.quadraticCurveTo(-40, 10, -35, -5);
+    g.stroke({ color: p.primary, width: 8 });
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawHamster(g: Graphics, p: any): void {
+    // Round chubby body
+    g.circle(0, 5, 28);
+    g.fill({ color: p.primary });
+    g.circle(0, 5, 28);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Cheek pouches
+    g.circle(-20, 0, 12);
+    g.fill({ color: p.accent });
+    g.circle(-20, 0, 12);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(20, 0, 12);
+    g.fill({ color: p.accent });
+    g.circle(20, 0, 12);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Small round ears
+    g.circle(-15, -25, 8);
+    g.fill({ color: p.primary });
+    g.circle(-15, -25, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-15, -25, 4);
+    g.fill({ color: p.accent });
+    g.circle(15, -25, 8);
+    g.fill({ color: p.primary });
+    g.circle(15, -25, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(15, -25, 4);
+    g.fill({ color: p.accent });
+    // Eyes
+    this.drawCuteEyes(g, 0, -8, 6, p.eye);
+    // Nose
+    g.circle(0, 2, 4);
+    g.fill({ color: p.accent });
+    // Tiny paws
+    g.ellipse(-18, 28, 8, 5);
+    g.fill({ color: p.accent });
+    g.ellipse(-18, 28, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(18, 28, 8, 5);
+    g.fill({ color: p.accent });
+    g.ellipse(18, 28, 8, 5);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawRaccoon(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 10, 24, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 24, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Striped tail
+    g.roundRect(-35, 5, 20, 12, 6);
+    g.fill({ color: p.primary });
+    g.roundRect(-35, 5, 20, 12, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.rect(-32, 5, 4, 12);
+    g.fill({ color: 0x000000 });
+    g.rect(-24, 5, 4, 12);
+    g.fill({ color: 0x000000 });
+    // Head
+    g.circle(0, -18, 18);
+    g.fill({ color: p.primary });
+    g.circle(0, -18, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Mask
+    g.ellipse(-10, -20, 10, 6);
+    g.fill({ color: 0x000000 });
+    g.ellipse(10, -20, 10, 6);
+    g.fill({ color: 0x000000 });
+    // Eyes in mask
+    g.circle(-10, -20, 5);
+    g.fill({ color: 0xffffff });
+    g.circle(-9, -19, 2);
+    g.fill({ color: p.eye });
+    g.circle(10, -20, 5);
+    g.fill({ color: 0xffffff });
+    g.circle(11, -19, 2);
+    g.fill({ color: p.eye });
+    // Ears
+    g.ellipse(-14, -32, 6, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(-14, -32, 6, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(14, -32, 6, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(14, -32, 6, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Nose
+    g.circle(0, -12, 4);
+    g.fill({ color: 0x000000 });
+  }
+
+  private drawDuck(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 10, 24, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 24, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -16, 16);
+    g.fill({ color: p.primary });
+    g.circle(0, -16, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Bill
+    g.ellipse(16, -12, 14, 6);
+    g.fill({ color: 0xffa500 });
+    g.ellipse(16, -12, 14, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes (cosmic sparkle)
+    g.circle(-5, -20, 6);
+    g.fill({ color: 0xffffff });
+    g.circle(-5, -20, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(-4, -19, 3);
+    g.fill({ color: p.eye });
+    // Sparkles
+    g.moveTo(-5, -28);
+    g.lineTo(-5, -32);
+    g.stroke({ color: p.accent, width: 2 });
+    g.moveTo(-10, -25);
+    g.lineTo(-14, -25);
+    g.stroke({ color: p.accent, width: 2 });
+    // Wing
+    g.ellipse(-15, 8, 10, 14);
+    g.fill({ color: p.secondary });
+    g.ellipse(-15, 8, 10, 14);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawDog(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 10, 26, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 26, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -16, 18);
+    g.fill({ color: p.primary });
+    g.circle(0, -16, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Floppy ears
+    g.ellipse(-18, -10, 10, 18);
+    g.fill({ color: p.secondary });
+    g.ellipse(-18, -10, 10, 18);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.ellipse(18, -10, 10, 18);
+    g.fill({ color: p.secondary });
+    g.ellipse(18, -10, 10, 18);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Snout
+    g.ellipse(0, -8, 12, 10);
+    g.fill({ color: p.accent });
+    g.ellipse(0, -8, 12, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Nose
+    g.ellipse(0, -10, 5, 4);
+    g.fill({ color: 0x000000 });
+    // Happy eyes
+    this.drawCuteEyes(g, 0, -20, 5, p.eye);
+    // Tongue
+    g.ellipse(0, 2, 5, 8);
+    g.fill({ color: 0xff6b6b });
+    g.ellipse(0, 2, 5, 8);
+    g.stroke({ color: 0x000000, width: 1 });
+    // Wagging tail
+    g.moveTo(-22, 15);
+    g.quadraticCurveTo(-35, 5, -30, -5);
+    g.stroke({ color: p.primary, width: 8 });
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawHuman(g: Graphics, p: any): void {
+    // Body (plain shirt)
+    g.roundRect(-20, -5, 40, 35, 10);
+    g.fill({ color: p.primary });
+    g.roundRect(-20, -5, 40, 35, 10);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -25, 18);
+    g.fill({ color: p.accent });
+    g.circle(0, -25, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Hair
+    g.ellipse(0, -38, 16, 8);
+    g.fill({ color: p.secondary });
+    g.ellipse(0, -38, 16, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Normal eyes
+    this.drawCuteEyes(g, 0, -28, 5, p.eye);
+    // Neutral expression
+    g.moveTo(-6, -18);
+    g.lineTo(6, -18);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Arms
+    g.roundRect(-32, 0, 14, 8, 4);
+    g.fill({ color: p.accent });
+    g.roundRect(-32, 0, 14, 8, 4);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.roundRect(18, 0, 14, 8, 4);
+    g.fill({ color: p.accent });
+    g.roundRect(18, 0, 14, 8, 4);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawBunny(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 10, 22, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 22, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -15, 18);
+    g.fill({ color: p.primary });
+    g.circle(0, -15, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Long ears
+    g.roundRect(-12, -65, 10, 45, 5);
+    g.fill({ color: p.primary });
+    g.roundRect(-12, -65, 10, 45, 5);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.roundRect(-10, -60, 6, 35, 3);
+    g.fill({ color: p.accent });
+    g.roundRect(2, -65, 10, 45, 5);
+    g.fill({ color: p.primary });
+    g.roundRect(2, -65, 10, 45, 5);
+    g.stroke({ color: 0x000000, width: 3 });
+    g.roundRect(4, -60, 6, 35, 3);
+    g.fill({ color: p.accent });
+    // Eyes
+    this.drawCuteEyes(g, 0, -18, 6, p.eye);
+    // Nose
+    g.moveTo(0, -10);
+    g.lineTo(-4, -6);
+    g.lineTo(4, -6);
+    g.closePath();
+    g.fill({ color: p.accent });
+    // Fluffy tail
+    g.circle(-18, 20, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(-18, 20, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Big feet
+    g.ellipse(-12, 28, 12, 6);
+    g.fill({ color: p.primary });
+    g.ellipse(-12, 28, 12, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(12, 28, 12, 6);
+    g.fill({ color: p.primary });
+    g.ellipse(12, 28, 12, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawSquirrel(g: Graphics, p: any): void {
+    // Big fluffy tail (behind)
+    g.moveTo(-25, -10);
+    g.quadraticCurveTo(-50, -30, -40, 20);
+    g.quadraticCurveTo(-30, 35, -15, 15);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.moveTo(-25, -10);
+    g.quadraticCurveTo(-50, -30, -40, 20);
+    g.quadraticCurveTo(-30, 35, -15, 15);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Body
+    g.ellipse(0, 10, 20, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 20, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -14, 16);
+    g.fill({ color: p.primary });
+    g.circle(0, -14, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Pointed ears
+    g.ellipse(-10, -28, 5, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(-10, -28, 5, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(10, -28, 5, 8);
+    g.fill({ color: p.primary });
+    g.ellipse(10, -28, 5, 8);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes
+    this.drawCuteEyes(g, 0, -16, 5, p.eye);
+    // Nose
+    g.circle(0, -8, 3);
+    g.fill({ color: 0x000000 });
+    // Ninja mask
+    g.rect(-18, -20, 36, 8);
+    g.fill({ color: 0x000000, alpha: 0.6 });
+    // Holding acorn
+    g.ellipse(15, 5, 8, 10);
+    g.fill({ color: 0x8B4513 });
+    g.ellipse(15, 5, 8, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(15, -3, 6, 4);
+    g.fill({ color: 0x654321 });
+  }
+
+  private drawPenguin(g: Graphics, p: any): void {
+    // Body (tuxedo shape)
+    g.ellipse(0, 8, 24, 26);
+    g.fill({ color: 0x000000 });
+    g.ellipse(0, 8, 24, 26);
+    g.stroke({ color: 0x000000, width: 4 });
+    // White belly
+    g.ellipse(0, 12, 16, 20);
+    g.fill({ color: 0xffffff });
+    // Head
+    g.circle(0, -20, 18);
+    g.fill({ color: 0x000000 });
+    g.circle(0, -20, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // White face
+    g.ellipse(0, -16, 12, 10);
+    g.fill({ color: 0xffffff });
+    // Beak
+    g.moveTo(0, -14);
+    g.lineTo(-6, -8);
+    g.lineTo(6, -8);
+    g.closePath();
+    g.fill({ color: 0xffa500 });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Eyes
+    this.drawCuteEyes(g, 0, -22, 5, 0x000000);
+    // Rocket pack
+    g.roundRect(-8, 20, 16, 18, 4);
+    g.fill({ color: p.primary });
+    g.roundRect(-8, 20, 16, 18, 4);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Flame
+    g.moveTo(-4, 38);
+    g.lineTo(0, 48);
+    g.lineTo(4, 38);
+    g.closePath();
+    g.fill({ color: 0xff6600 });
+    g.moveTo(-2, 38);
+    g.lineTo(0, 44);
+    g.lineTo(2, 38);
+    g.closePath();
+    g.fill({ color: 0xffff00 });
+    // Flippers
+    g.ellipse(-26, 5, 8, 16);
+    g.fill({ color: 0x000000 });
+    g.ellipse(-26, 5, 8, 16);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.ellipse(26, 5, 8, 16);
+    g.fill({ color: 0x000000 });
+    g.ellipse(26, 5, 8, 16);
+    g.stroke({ color: 0x000000, width: 2 });
+  }
+
+  private drawBat(g: Graphics, p: any): void {
+    // Wings (spread out)
+    g.moveTo(-20, 0);
+    g.quadraticCurveTo(-50, -20, -45, 10);
+    g.quadraticCurveTo(-40, 25, -20, 15);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(20, 0);
+    g.quadraticCurveTo(50, -20, 45, 10);
+    g.quadraticCurveTo(40, 25, 20, 15);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Body
+    g.ellipse(0, 10, 18, 20);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 10, 18, 20);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.circle(0, -15, 16);
+    g.fill({ color: p.primary });
+    g.circle(0, -15, 16);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Huge ears
+    g.moveTo(-12, -25);
+    g.lineTo(-18, -55);
+    g.lineTo(-5, -30);
+    g.closePath();
+    g.fill({ color: p.primary });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(-14, -30);
+    g.lineTo(-16, -45);
+    g.lineTo(-8, -32);
+    g.closePath();
+    g.fill({ color: p.accent });
+    g.moveTo(12, -25);
+    g.lineTo(18, -55);
+    g.lineTo(5, -30);
+    g.closePath();
+    g.fill({ color: p.primary });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(14, -30);
+    g.lineTo(16, -45);
+    g.lineTo(8, -32);
+    g.closePath();
+    g.fill({ color: p.accent });
+    // Eyes
+    this.drawCuteEyes(g, 0, -18, 5, p.eye);
+    // Fangs
+    g.moveTo(-4, -5);
+    g.lineTo(-3, 2);
+    g.lineTo(-2, -5);
+    g.fill({ color: 0xffffff });
+    g.moveTo(4, -5);
+    g.lineTo(3, 2);
+    g.lineTo(2, -5);
+    g.fill({ color: 0xffffff });
+  }
+
+  private drawFish(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 0, 30, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 0, 30, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Tail fin
+    g.moveTo(-25, 0);
+    g.lineTo(-45, -15);
+    g.lineTo(-45, 15);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Top fin
+    g.moveTo(-5, -20);
+    g.lineTo(0, -35);
+    g.lineTo(10, -20);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Side fin
+    g.ellipse(10, 15, 10, 6);
+    g.fill({ color: p.secondary });
+    g.ellipse(10, 15, 10, 6);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Big eyes
+    g.circle(15, -5, 10);
+    g.fill({ color: 0xffffff });
+    g.circle(15, -5, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    g.circle(17, -4, 5);
+    g.fill({ color: p.eye });
+    // Bubbles
+    g.circle(35, -10, 4);
     g.fill({ color: 0xffffff, alpha: 0.6 });
+    g.circle(35, -10, 4);
+    g.stroke({ color: p.accent, width: 1 });
+    g.circle(40, -18, 3);
+    g.fill({ color: 0xffffff, alpha: 0.6 });
+    g.circle(40, -18, 3);
+    g.stroke({ color: p.accent, width: 1 });
+    g.circle(38, -25, 2);
+    g.fill({ color: 0xffffff, alpha: 0.6 });
+    // Cute mouth
+    g.circle(28, 2, 4);
+    g.fill({ color: p.secondary });
+  }
+
+  private drawFox(g: Graphics, p: any): void {
+    // Fluffy tail
+    g.moveTo(-20, 10);
+    g.quadraticCurveTo(-45, 0, -40, 25);
+    g.quadraticCurveTo(-30, 40, -15, 20);
+    g.closePath();
+    g.fill({ color: p.primary, alpha: 0.8 });
+    g.stroke({ color: 0x000000, width: 2, alpha: 0.5 });
+    // White tail tip
+    g.circle(-35, 25, 8);
+    g.fill({ color: 0xffffff, alpha: 0.8 });
+    // Body (slightly transparent for ghost effect)
+    g.ellipse(0, 10, 22, 18);
+    g.fill({ color: p.primary, alpha: 0.85 });
+    g.ellipse(0, 10, 22, 18);
+    g.stroke({ color: 0x000000, width: 4, alpha: 0.7 });
+    // Head
+    g.circle(0, -15, 18);
+    g.fill({ color: p.primary, alpha: 0.85 });
+    g.circle(0, -15, 18);
+    g.stroke({ color: 0x000000, width: 4, alpha: 0.7 });
+    // Big pointy ears
+    g.moveTo(-15, -28);
+    g.lineTo(-18, -50);
+    g.lineTo(-5, -32);
+    g.closePath();
+    g.fill({ color: p.primary, alpha: 0.85 });
+    g.stroke({ color: 0x000000, width: 2, alpha: 0.7 });
+    g.moveTo(-14, -35);
+    g.lineTo(-16, -45);
+    g.lineTo(-8, -35);
+    g.closePath();
+    g.fill({ color: p.accent, alpha: 0.8 });
+    g.moveTo(15, -28);
+    g.lineTo(18, -50);
+    g.lineTo(5, -32);
+    g.closePath();
+    g.fill({ color: p.primary, alpha: 0.85 });
+    g.stroke({ color: 0x000000, width: 2, alpha: 0.7 });
+    g.moveTo(14, -35);
+    g.lineTo(16, -45);
+    g.lineTo(8, -35);
+    g.closePath();
+    g.fill({ color: p.accent, alpha: 0.8 });
+    // White muzzle
+    g.ellipse(0, -8, 10, 8);
+    g.fill({ color: 0xffffff, alpha: 0.8 });
+    // Ghostly glowing eyes
+    g.circle(-8, -18, 6);
+    g.fill({ color: p.eye });
+    g.circle(-8, -18, 3);
+    g.fill({ color: 0xffffff });
+    g.circle(8, -18, 6);
+    g.fill({ color: p.eye });
+    g.circle(8, -18, 3);
+    g.fill({ color: 0xffffff });
+    // Nose
+    g.circle(0, -5, 3);
+    g.fill({ color: 0x000000, alpha: 0.7 });
+  }
+
+  private drawMole(g: Graphics, p: any): void {
+    // Body
+    g.ellipse(0, 8, 26, 22);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 8, 26, 22);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Head
+    g.ellipse(0, -15, 20, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(0, -15, 20, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Big digging claws
+    g.moveTo(-30, 5);
+    g.lineTo(-42, -5);
+    g.lineTo(-38, 5);
+    g.lineTo(-45, 10);
+    g.lineTo(-38, 12);
+    g.lineTo(-42, 20);
+    g.lineTo(-30, 12);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    g.moveTo(30, 5);
+    g.lineTo(42, -5);
+    g.lineTo(38, 5);
+    g.lineTo(45, 10);
+    g.lineTo(38, 12);
+    g.lineTo(42, 20);
+    g.lineTo(30, 12);
+    g.closePath();
+    g.fill({ color: p.secondary });
+    g.stroke({ color: 0x000000, width: 2 });
+    // Big pink nose
+    g.circle(0, -8, 10);
+    g.fill({ color: 0xffb6c1 });
+    g.circle(0, -8, 10);
+    g.stroke({ color: 0x000000, width: 2 });
+    // Tiny eyes (moles are nearly blind)
+    g.circle(-8, -18, 3);
+    g.fill({ color: 0x000000 });
+    g.circle(8, -18, 3);
+    g.fill({ color: 0x000000 });
+    // Magnet symbol on belly
+    g.moveTo(-8, 15);
+    g.lineTo(-8, 5);
+    g.arc(0, 5, 8, Math.PI, 0);
+    g.lineTo(8, 15);
+    g.stroke({ color: 0xff0000, width: 4 });
+  }
+
+  private drawPeacock(g: Graphics, p: any): void {
+    // Tail feathers (fan behind)
+    for (let i = -4; i <= 4; i++) {
+      const angle = (i / 4) * 0.8 - Math.PI / 2;
+      const x = Math.cos(angle) * 45;
+      const y = Math.sin(angle) * 45 + 10;
+      g.ellipse(x, y, 12, 25);
+      g.fill({ color: i % 2 === 0 ? p.primary : p.secondary });
+      g.ellipse(x, y, 12, 25);
+      g.stroke({ color: 0x000000, width: 2 });
+      // Eye spots on feathers
+      g.circle(x, y - 10, 6);
+      g.fill({ color: 0x00ffff });
+      g.circle(x, y - 10, 6);
+      g.stroke({ color: 0x000000, width: 1 });
+      g.circle(x, y - 10, 3);
+      g.fill({ color: 0x000080 });
+    }
+    // Body
+    g.ellipse(0, 15, 20, 18);
+    g.fill({ color: p.primary });
+    g.ellipse(0, 15, 20, 18);
+    g.stroke({ color: 0x000000, width: 4 });
+    // Neck
+    g.roundRect(-6, -25, 12, 35, 6);
+    g.fill({ color: p.primary });
+    g.roundRect(-6, -25, 12, 35, 6);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Head
+    g.circle(0, -32, 12);
+    g.fill({ color: p.primary });
+    g.circle(0, -32, 12);
+    g.stroke({ color: 0x000000, width: 3 });
+    // Crown feathers
+    g.moveTo(-3, -42);
+    g.lineTo(-4, -55);
+    g.lineTo(-1, -45);
+    g.stroke({ color: p.accent, width: 2 });
+    g.circle(-4, -57, 3);
+    g.fill({ color: p.accent });
+    g.moveTo(0, -42);
+    g.lineTo(0, -58);
+    g.lineTo(0, -45);
+    g.stroke({ color: p.accent, width: 2 });
+    g.circle(0, -60, 3);
+    g.fill({ color: p.accent });
+    g.moveTo(3, -42);
+    g.lineTo(4, -55);
+    g.lineTo(1, -45);
+    g.stroke({ color: p.accent, width: 2 });
+    g.circle(4, -57, 3);
+    g.fill({ color: p.accent });
+    // Beak
+    g.moveTo(8, -32);
+    g.lineTo(18, -30);
+    g.lineTo(8, -28);
+    g.closePath();
+    g.fill({ color: 0xffa500 });
+    g.stroke({ color: 0x000000, width: 1 });
+    // Fabulous eye
+    g.circle(-3, -34, 5);
+    g.fill({ color: 0xffffff });
+    g.circle(-3, -34, 5);
+    g.stroke({ color: 0x000000, width: 1 });
+    g.circle(-2, -33, 2);
+    g.fill({ color: p.eye });
+  }
+
+  private drawDefaultBlob(g: Graphics, p: any): void {
+    // Fallback blob body
+    g.roundRect(-28, -32, 56, 64, 28);
+    g.fill({ color: p.primary });
+    g.roundRect(-28, -32, 56, 64, 28);
+    g.stroke({ color: 0x000000, width: 5 });
+    g.ellipse(-8, -10, 14, 10);
+    g.fill({ color: 0xffffff, alpha: 0.3 });
+    this.drawCuteEyes(g, 0, -10, 6, p.eye);
   }
 
   private drawBeastFace(g: Graphics, beastId: string, palette: any, expression: string): void {
-    // Among Us style - visor is already drawn in body
-    // Just add expression indicators if needed
-
+    // Expression effects are now integrated into the body drawings
+    // This function adds overlay effects for states
     const isAttack = expression === 'attack';
     const isHurt = expression === 'hurt';
 
     if (isAttack) {
-      // Red glow around visor for attack
-      g.ellipse(8, -10, 20, 14);
-      g.stroke({ color: 0xff4444, width: 2, alpha: 0.8 });
+      // Anger lines
+      g.moveTo(-20, -35);
+      g.lineTo(-12, -30);
+      g.stroke({ color: 0xff4444, width: 3 });
+      g.moveTo(20, -35);
+      g.lineTo(12, -30);
+      g.stroke({ color: 0xff4444, width: 3 });
     }
 
     if (isHurt) {
-      // Crack effect on visor
-      g.moveTo(5, -18);
-      g.lineTo(10, -10);
-      g.lineTo(8, -5);
-      g.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+      // Pain stars
+      g.moveTo(-15, -40);
+      g.lineTo(-18, -35);
+      g.lineTo(-12, -35);
+      g.closePath();
+      g.fill({ color: 0xffffff });
+      g.moveTo(15, -38);
+      g.lineTo(12, -33);
+      g.lineTo(18, -33);
+      g.closePath();
+      g.fill({ color: 0xffffff });
     }
   }
 
   private drawBeastAccessory(g: Graphics, beastId: string, palette: any): void {
-    // Among Us style - optional accessories/hats based on beast type
-    // These sit on top of the blob body
-
-    switch (beastId) {
-      case 'rock_tortoise':
-        // Mini shell on top
-        g.ellipse(0, -35, 12, 8);
-        g.fill({ color: palette.secondary });
-        g.ellipse(0, -35, 12, 8);
-        g.stroke({ color: 0x000000, width: 3 });
-        break;
-
-      case 'honk_goose':
-        // Party hat
-        g.moveTo(0, -50);
-        g.lineTo(-10, -32);
-        g.lineTo(10, -32);
-        g.fill({ color: 0xf5f557 });
-        g.moveTo(0, -50);
-        g.lineTo(-10, -32);
-        g.lineTo(10, -32);
-        g.closePath();
-        g.stroke({ color: 0x000000, width: 3 });
-        // Pom pom
-        g.circle(0, -52, 5);
-        g.fill({ color: 0xff4444 });
-        g.circle(0, -52, 5);
-        g.stroke({ color: 0x000000, width: 2 });
-        break;
-
-      case 'punch_crab':
-        // Boxing gloves indicator - little fists
-        g.circle(-38, 0, 10);
-        g.fill({ color: 0xff4444 });
-        g.circle(-38, 0, 10);
-        g.stroke({ color: 0x000000, width: 3 });
-        g.circle(38, 0, 10);
-        g.fill({ color: 0xff4444 });
-        g.circle(38, 0, 10);
-        g.stroke({ color: 0x000000, width: 3 });
-        break;
-    }
+    // Accessories are now integrated into the creature-specific drawings
+    // This function is kept for any additional overlays if needed
   }
 
   private animateBeast(sprite: BeastSprite, deltaTime: number): void {
