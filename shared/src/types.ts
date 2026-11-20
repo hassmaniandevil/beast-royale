@@ -33,6 +33,14 @@ export interface PlayerInput {
   panic: boolean;
   interact: boolean;  // E key for vents, etc.
   aimDirection: Vector2;  // Mouse/joystick aim for projectiles
+
+  // Advanced combat inputs
+  attackHeld: boolean;   // Holding attack for charge
+  dodge: boolean;        // Dodge/roll input
+  parry: boolean;        // Parry/block input
+  grab: boolean;         // Grab input
+  superActivate: boolean; // Activate super ability
+  grabEscape: boolean;   // Mashing to escape grab
 }
 
 // Beast definition
@@ -87,6 +95,54 @@ export interface PlayerState {
   stunUntil: number;               // Timestamp when stun ends
   slowMultiplier: number;          // Speed multiplier from slow effects (1.0 = normal)
   positionHistory: Vector2[];      // Last 3 seconds of positions (for rewind)
+
+  // === ADVANCED COMBAT SYSTEM ===
+  // Combo System
+  comboCount: number;              // Current combo hits
+  comboTimer: number;              // Time until combo resets (ms)
+  lastComboTime: number;           // Timestamp of last combo hit
+
+  // Super Meter
+  superMeter: number;              // 0-100, builds from dealing/taking damage
+  isSuperActive: boolean;          // Super ability activated
+  superDuration: number;           // Remaining super time (ms)
+
+  // Charge Attack
+  isCharging: boolean;             // Holding attack button
+  chargeStartTime: number;         // When charge started
+  chargeLevel: number;             // 0-3 charge level
+
+  // Dodge/Parry System
+  isDodging: boolean;              // In dodge roll
+  dodgeCooldown: number;           // Cooldown remaining (ms)
+  isParrying: boolean;             // In parry window
+  parryWindow: number;             // Time remaining in parry window (ms)
+  perfectParry: boolean;           // Landed a perfect parry
+  parryStunUntil: number;          // Timestamp when parry stun ends
+
+  // Grab System
+  isGrabbing: boolean;             // Attempting grab
+  grabbedPlayer: string | null;    // ID of grabbed player
+  grabbedBy: string | null;        // ID of player grabbing us
+  grabEscapeProgress: number;      // 0-100 mash to escape
+
+  // Stagger System
+  staggerMeter: number;            // 0-100, stagger when full
+  isStaggered: boolean;            // Currently staggered
+  staggerDuration: number;         // Remaining stagger time (ms)
+
+  // Combat State
+  hitstopRemaining: number;        // Frames of hitstop remaining
+  lastHitDirection: Vector2;       // Direction of last hit taken
+  criticalHit: boolean;            // Last attack was crit
+  counterHit: boolean;             // Hit during opponent's attack
+
+  // Directional Attack
+  attackDirection: 'neutral' | 'up' | 'down' | 'side';
+
+  // Momentum
+  momentum: number;                // Built from consecutive hits
+  momentumDecay: number;           // Time until momentum decays
 }
 
 // Hazard types
@@ -190,6 +246,10 @@ export interface MatchState {
   buttons: ButtonState[];
   doors: DoorState[];
   effectZones: EffectZoneState[];
+
+  // Combat event system (for client-side feedback)
+  recentHits: HitEvent[];
+  combatFeedback: CombatFeedback[];
 }
 
 // Delta update (partial state)
@@ -553,4 +613,37 @@ export interface DoorState {
   position: Vector2;
   size: Vector2;
   isOpen: boolean;
+}
+
+// ============================================
+// COMBAT EVENT SYSTEM
+// ============================================
+
+export type HitType = 'normal' | 'critical' | 'counter' | 'charged' | 'combo' | 'super' | 'parried' | 'grab';
+
+export interface HitEvent {
+  id: string;
+  attackerId: string;
+  attackerName: string;
+  victimId: string;
+  victimName: string;
+  damage: number;
+  knockback: number;
+  knockbackDirection: Vector2;
+  position: Vector2;
+  hitType: HitType;
+  comboCount: number;
+  chargeLevel: number;
+  isCritical: boolean;
+  isCounter: boolean;
+  hitstopFrames: number;
+  timestamp: number;
+}
+
+export interface CombatFeedback {
+  type: 'hit' | 'parry' | 'dodge' | 'grab' | 'escape' | 'stagger' | 'super_activate' | 'super_hit';
+  position: Vector2;
+  direction: Vector2;
+  magnitude: number;  // Intensity for VFX scaling
+  text?: string;      // Damage numbers, combo count, etc.
 }

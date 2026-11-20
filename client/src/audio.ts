@@ -8,7 +8,8 @@ type SoundType =
   | 'select' | 'click' | 'hover' | 'panic' | 'knockback' | 'powerup'
   | 'zone_warning' | 'chaos_event' | 'countdown' | 'match_start'
   | 'fireball' | 'lightning' | 'dash' | 'teleport' | 'explosion'
-  | 'honk' | 'scream' | 'splash' | 'crunch' | 'whoosh';
+  | 'honk' | 'scream' | 'splash' | 'crunch' | 'whoosh'
+  | 'parry' | 'dodge' | 'grab' | 'super' | 'combo' | 'critical';
 
 interface Track {
   name: string;
@@ -417,6 +418,31 @@ export class AudioManager {
         break;
       case 'whoosh':
         this.playSwoosh(time, 0.2);
+        break;
+
+      // === NEW COMBAT SOUNDS ===
+      case 'parry':
+        this.playParry(time, 0.5);
+        break;
+
+      case 'dodge':
+        this.playSwoosh(time, 0.3);
+        break;
+
+      case 'grab':
+        this.playGrab(time, 0.4);
+        break;
+
+      case 'super':
+        this.playSuper(time, 0.6);
+        break;
+
+      case 'combo':
+        this.playCombo(time, 0.3, variation);
+        break;
+
+      case 'critical':
+        this.playCritical(time, 0.5);
         break;
     }
   }
@@ -1124,6 +1150,219 @@ export class AudioManager {
 
   getSfxVolume(): number {
     return this.sfxVolume;
+  }
+
+  // === NEW COMBAT SOUND IMPLEMENTATIONS ===
+
+  private playParry(time: number, volume: number): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Metallic shield impact sound
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2000, time);
+    filter.Q.setValueAtTime(10, time);
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, time);
+    osc.frequency.exponentialRampToValueAtTime(2400, time + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(1200, time + 0.1);
+
+    gain.gain.setValueAtTime(volume * this.sfxVolume, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(time);
+    osc.stop(time + 0.2);
+
+    // Add a second shimmer
+    const shimmer = this.ctx.createOscillator();
+    const shimmerGain = this.ctx.createGain();
+
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(3000, time);
+    shimmer.frequency.exponentialRampToValueAtTime(4500, time + 0.1);
+
+    shimmerGain.gain.setValueAtTime(volume * 0.3 * this.sfxVolume, time);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.01, time + 0.12);
+
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(this.sfxGain);
+
+    shimmer.start(time);
+    shimmer.stop(time + 0.15);
+  }
+
+  private playGrab(time: number, volume: number): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Impact + grip sound
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(80, time + 0.1);
+
+    gain.gain.setValueAtTime(volume * this.sfxVolume, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(time);
+    osc.stop(time + 0.2);
+
+    // Add crunch texture
+    const bufferSize = this.ctx.sampleRate * 0.1;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      const t = i / this.ctx.sampleRate;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 30);
+    }
+
+    const noise = this.ctx.createBufferSource();
+    const noiseGain = this.ctx.createGain();
+    const noiseFilter = this.ctx.createBiquadFilter();
+
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(500, time);
+
+    noise.buffer = buffer;
+    noiseGain.gain.setValueAtTime(volume * 0.4 * this.sfxVolume, time);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.sfxGain);
+
+    noise.start(time);
+  }
+
+  private playSuper(time: number, volume: number): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Dramatic power-up sound with rising pitch
+    for (let i = 0; i < 5; i++) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const delay = i * 0.05;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(200 + i * 200, time + delay);
+      osc.frequency.exponentialRampToValueAtTime(400 + i * 300, time + delay + 0.3);
+
+      gain.gain.setValueAtTime(0, time + delay);
+      gain.gain.linearRampToValueAtTime(volume * 0.3 * this.sfxVolume, time + delay + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + delay + 0.4);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(time + delay);
+      osc.stop(time + delay + 0.5);
+    }
+
+    // Add explosion at peak
+    setTimeout(() => {
+      if (!this.ctx || !this.sfxGain) return;
+      const now = this.ctx.currentTime;
+
+      const bufferSize = this.ctx.sampleRate * 0.3;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / this.ctx.sampleRate;
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 8);
+      }
+
+      const noise = this.ctx.createBufferSource();
+      const noiseGain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, now);
+      filter.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+
+      noise.buffer = buffer;
+      noiseGain.gain.setValueAtTime(volume * this.sfxVolume, now);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.sfxGain);
+
+      noise.start(now);
+    }, 250);
+  }
+
+  private playCombo(time: number, volume: number, comboLevel: number): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Rising pitch based on combo count
+    const basePitch = 400 + comboLevel * 100;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(basePitch, time);
+    osc.frequency.exponentialRampToValueAtTime(basePitch * 1.5, time + 0.1);
+
+    gain.gain.setValueAtTime(volume * this.sfxVolume, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(time);
+    osc.stop(time + 0.2);
+  }
+
+  private playCritical(time: number, volume: number): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    // Sharp, satisfying crit sound
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, time);
+    osc.frequency.exponentialRampToValueAtTime(1200, time + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(300, time + 0.15);
+
+    gain.gain.setValueAtTime(volume * this.sfxVolume, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(time);
+    osc.stop(time + 0.25);
+
+    // High-pitched accent
+    const accent = this.ctx.createOscillator();
+    const accentGain = this.ctx.createGain();
+
+    accent.type = 'sine';
+    accent.frequency.setValueAtTime(2000, time);
+    accent.frequency.exponentialRampToValueAtTime(3000, time + 0.05);
+
+    accentGain.gain.setValueAtTime(volume * 0.4 * this.sfxVolume, time);
+    accentGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+
+    accent.connect(accentGain);
+    accentGain.connect(this.sfxGain);
+
+    accent.start(time);
+    accent.stop(time + 0.12);
   }
 }
 

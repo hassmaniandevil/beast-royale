@@ -29,6 +29,8 @@ import {
   ButtonState,
   DoorState,
   EffectZoneState,
+  HitEvent,
+  CombatFeedback,
 } from '@beast-royale/shared';
 import { audio } from './audio';
 
@@ -263,6 +265,13 @@ export class Renderer {
   private shrinkZoneGlow: Graphics;
   private arenaBackground: Graphics;
 
+  // Combat feedback tracking
+  private combatFeedbackContainer: Container | null = null;
+  private floatingTexts: { text: Text; vx: number; vy: number; life: number; maxLife: number }[] = [];
+  private renderedHitIds: Set<string> = new Set();
+  private hitstopActive: boolean = false;
+  private hitstopEndTime: number = 0;
+
   private scale: number = 1;
   private time: number = 0;
   private screenShake: { intensity: number; duration: number } = { intensity: 0, duration: 0 };
@@ -299,6 +308,10 @@ export class Renderer {
 
     // Create particle system
     this.particles = new ParticleSystem(this.effectsContainer);
+
+    // Create combat feedback container (above effects)
+    this.combatFeedbackContainer = new Container();
+    this.effectsContainer.addChild(this.combatFeedbackContainer);
 
     // Initial setup
     this.drawArenaBackground();
@@ -405,6 +418,14 @@ export class Renderer {
     this.time += deltaTime;
     this.localPlayerId = localPlayerId;
 
+    // Handle hitstop (freeze frame effect)
+    if (this.hitstopActive && performance.now() < this.hitstopEndTime) {
+      // During hitstop, slow down animations significantly
+      deltaTime *= 0.1;
+    } else {
+      this.hitstopActive = false;
+    }
+
     // Update particles
     this.particles.update(deltaTime);
 
@@ -415,6 +436,9 @@ export class Renderer {
       this.gameContainer.x += (Math.random() - 0.5) * shake;
       this.gameContainer.y += (Math.random() - 0.5) * shake;
     }
+
+    // Update floating combat texts
+    this.updateFloatingTexts(deltaTime);
 
     // Animate beasts
     for (const [id, sprite] of this.beastSprites) {
@@ -455,6 +479,9 @@ export class Renderer {
 
     // Render projectiles (on top)
     this.renderProjectiles(state.projectiles || []);
+
+    // Render combat feedback (damage numbers, effects)
+    this.renderCombatFeedback(state.recentHits || [], state.combatFeedback || []);
 
     // Render chaos effects
     this.renderChaosEffects(state.activeChaosEvents);
@@ -749,6 +776,48 @@ export class Renderer {
         sprite.expression = 'normal';
       }
 
+      // === ADVANCED COMBAT STATE VISUALS ===
+      const palette = BEAST_PALETTES[player.beastId] || BEAST_PALETTES.rock_tortoise;
+
+      // Dodge effect - afterimage and motion blur
+      if (player.isDodging) {
+        this.spawnDodgeEffect(player, palette);
+        sprite.body.alpha = 0.6;
+      }
+
+      // Parry effect - shield glow
+      if (player.isParrying) {
+        this.spawnParryReadyEffect(player, palette);
+      }
+
+      // Perfect parry visual (brief flash)
+      if (player.perfectParry) {
+        this.spawnPerfectParryEffect(player);
+      }
+
+      // Grab visual
+      if (player.isGrabbing || player.grabbedBy) {
+        this.spawnGrabEffect(player, palette);
+      }
+
+      // Super active aura
+      if (player.isSuperActive) {
+        this.spawnSuperAuraEffect(player, palette);
+        sprite.body.tint = 0xffff00;  // Golden tint
+      } else {
+        sprite.body.tint = 0xffffff;
+      }
+
+      // Charge attack indicator
+      if (player.isCharging && player.chargeLevel > 0) {
+        this.spawnChargeEffect(player, palette, player.chargeLevel);
+      }
+
+      // Stagger visual (stars around head)
+      if (player.isStaggered) {
+        this.spawnStaggerEffect(player);
+      }
+
       // Local player highlight
       if (player.id === localPlayerId) {
         sprite.container.zIndex = 1000;
@@ -758,10 +827,10 @@ export class Renderer {
         sprite.shadow.alpha = 0.3;
       }
 
-      // Invulnerability flash
-      if (player.invulnerableUntil > 0) {
+      // Invulnerability flash (dodge or damage)
+      if (player.invulnerableUntil > 0 || player.isDodging) {
         sprite.body.alpha = 0.5 + Math.sin(this.time / 30) * 0.3;
-      } else {
+      } else if (!player.isDodging) {
         sprite.body.alpha = 1;
       }
 
@@ -2496,6 +2565,481 @@ export class Renderer {
   triggerScreenShake(intensity: number = 5): void {
     this.screenShake.intensity = intensity;
     this.screenShake.duration = 300;
+  }
+
+  // ============================================
+  // ADVANCED COMBAT EFFECTS
+  // ============================================
+
+  private spawnDodgeEffect(player: PlayerState, palette: any): void {
+    // Afterimage trail
+    for (let i = 0; i < 3; i++) {
+      this.particles.emit({
+        x: player.position.x - player.velocity.x * i * 0.1,
+        y: player.position.y - player.velocity.y * i * 0.1,
+        count: 2,
+        color: palette.primary,
+        speed: 50,
+        spread: 10,
+        life: 200,
+        size: 15,
+        type: 'circle',
+      });
+    }
+  }
+
+  private spawnParryReadyEffect(player: PlayerState, palette: any): void {
+    // Shield glow around player
+    const pulseSize = 35 + Math.sin(this.time / 50) * 5;
+    this.particles.emit({
+      x: player.position.x,
+      y: player.position.y,
+      count: 1,
+      color: 0x3b82f6,  // Blue shield
+      speed: 0,
+      spread: pulseSize,
+      life: 50,
+      size: 20,
+      type: 'circle',
+    });
+  }
+
+  private spawnPerfectParryEffect(player: PlayerState): void {
+    // Brilliant flash for perfect parry
+    audio.playSound('parry');
+    this.triggerScreenShake(6);
+
+    // Golden burst
+    this.particles.burst(player.position.x, player.position.y, 0xffd700, 30);
+    this.particles.burst(player.position.x, player.position.y, 0xffffff, 20);
+
+    // Ring of light
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      this.particles.emit({
+        x: player.position.x + Math.cos(angle) * 40,
+        y: player.position.y + Math.sin(angle) * 40,
+        count: 2,
+        color: 0xffd700,
+        speed: 150,
+        spread: 5,
+        life: 300,
+        size: 10,
+        type: 'star',
+      });
+    }
+  }
+
+  private spawnGrabEffect(player: PlayerState, palette: any): void {
+    // Struggle particles
+    this.particles.emit({
+      x: player.position.x + (Math.random() - 0.5) * 20,
+      y: player.position.y + (Math.random() - 0.5) * 20,
+      count: 1,
+      color: 0xff6b6b,
+      speed: 100,
+      spread: 15,
+      life: 200,
+      size: 8,
+      type: 'star',
+    });
+  }
+
+  private spawnSuperAuraEffect(player: PlayerState, palette: any): void {
+    // Dramatic golden aura
+    const time = this.time / 100;
+
+    // Spiraling particles
+    for (let i = 0; i < 2; i++) {
+      const angle = time + (i * Math.PI);
+      const dist = 30 + Math.sin(time * 2) * 5;
+      this.particles.emit({
+        x: player.position.x + Math.cos(angle) * dist,
+        y: player.position.y + Math.sin(angle) * dist,
+        count: 1,
+        color: 0xffd700,
+        speed: 50,
+        spread: 5,
+        life: 300,
+        size: 10,
+        type: 'star',
+      });
+    }
+
+    // Rising energy
+    this.particles.emit({
+      x: player.position.x + (Math.random() - 0.5) * 30,
+      y: player.position.y + 20,
+      count: 1,
+      color: Math.random() > 0.5 ? 0xffd700 : 0xff6b00,
+      speed: 80,
+      spread: 5,
+      life: 400,
+      size: 6,
+      type: 'circle',
+    });
+  }
+
+  private spawnChargeEffect(player: PlayerState, palette: any, chargeLevel: number): void {
+    // Charge indicator - grows with charge level
+    const intensity = Math.min(chargeLevel / 3, 1);  // Max at level 3
+    const size = 20 + intensity * 30;
+
+    // Gathering energy particles
+    for (let i = 0; i < Math.ceil(intensity * 3); i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 50 + Math.random() * 30;
+      this.particles.emit({
+        x: player.position.x + Math.cos(angle) * dist,
+        y: player.position.y + Math.sin(angle) * dist,
+        count: 1,
+        color: intensity > 0.7 ? 0xff4444 : (intensity > 0.3 ? 0xffaa00 : palette.accent),
+        speed: 150,
+        spread: 5,
+        life: 200,
+        size: 6 + intensity * 4,
+        type: 'circle',
+      });
+    }
+
+    // Inner glow
+    this.particles.emit({
+      x: player.position.x,
+      y: player.position.y,
+      count: 1,
+      color: intensity > 0.7 ? 0xff0000 : 0xffaa00,
+      speed: 0,
+      spread: size,
+      life: 50,
+      size: size,
+      type: 'circle',
+    });
+  }
+
+  private spawnStaggerEffect(player: PlayerState): void {
+    // Cartoon stars around head
+    const starCount = 3;
+    for (let i = 0; i < starCount; i++) {
+      const angle = (this.time / 300) + (i / starCount) * Math.PI * 2;
+      const dist = 25;
+      this.particles.emit({
+        x: player.position.x + Math.cos(angle) * dist,
+        y: player.position.y - 40 + Math.sin(angle * 0.5) * 5,
+        count: 1,
+        color: 0xffd700,
+        speed: 0,
+        spread: 2,
+        life: 100,
+        size: 8,
+        type: 'star',
+      });
+    }
+  }
+
+  // ============================================
+  // COMBAT FEEDBACK RENDERING
+  // ============================================
+
+  private renderCombatFeedback(recentHits: HitEvent[], feedback: CombatFeedback[]): void {
+    // Render damage numbers from hit events
+    for (const hit of recentHits) {
+      if (this.renderedHitIds.has(hit.id)) continue;
+      this.renderedHitIds.add(hit.id);
+
+      // Spawn damage number
+      this.spawnDamageNumber(hit);
+
+      // Trigger hitstop for significant hits
+      if (hit.hitstopFrames > 0) {
+        this.triggerHitstop(hit.hitstopFrames * 16);  // ~16ms per frame
+      }
+
+      // Screen shake based on hit type
+      let shakeIntensity = 3;
+      if (hit.isCritical) shakeIntensity = 8;
+      else if (hit.isCounter) shakeIntensity = 6;
+      else if (hit.hitType === 'charged') shakeIntensity = 5 + hit.chargeLevel;
+      else if (hit.hitType === 'super') shakeIntensity = 10;
+      this.triggerScreenShake(shakeIntensity);
+
+      // Play hit sound
+      audio.playSound('hit', hit.damage / 50);
+
+      // Spawn hit particles at victim position
+      this.spawnHitEffect(hit);
+    }
+
+    // Render combat feedback effects
+    for (const fb of feedback) {
+      this.renderFeedbackEffect(fb);
+    }
+
+    // Clean up old hit IDs (keep last 100)
+    if (this.renderedHitIds.size > 100) {
+      const arr = Array.from(this.renderedHitIds);
+      for (let i = 0; i < 50; i++) {
+        this.renderedHitIds.delete(arr[i]);
+      }
+    }
+  }
+
+  private spawnDamageNumber(hit: HitEvent): void {
+    if (!this.combatFeedbackContainer) return;
+
+    // Style based on hit type
+    let color = 0xffffff;
+    let fontSize = 24;
+    let prefix = '';
+
+    switch (hit.hitType) {
+      case 'critical':
+        color = 0xffd700;  // Gold
+        fontSize = 32;
+        prefix = 'CRIT! ';
+        break;
+      case 'counter':
+        color = 0xff6b6b;  // Red
+        fontSize = 28;
+        prefix = 'COUNTER! ';
+        break;
+      case 'charged':
+        color = 0xff8c00;  // Orange
+        fontSize = 26 + hit.chargeLevel * 2;
+        break;
+      case 'combo':
+        color = 0x00ffff;  // Cyan
+        fontSize = 22 + hit.comboCount * 2;
+        break;
+      case 'super':
+        color = 0xff00ff;  // Magenta
+        fontSize = 36;
+        prefix = 'SUPER! ';
+        break;
+      case 'parried':
+        color = 0x3b82f6;  // Blue
+        fontSize = 24;
+        prefix = 'PARRIED! ';
+        break;
+    }
+
+    // Create damage text
+    const style = new TextStyle({
+      fontFamily: 'Fredoka, Arial, sans-serif',
+      fontSize,
+      fontWeight: '700',
+      fill: color,
+      stroke: { color: 0x000000, width: 4 },
+      dropShadow: {
+        color: 0x000000,
+        blur: 2,
+        distance: 2,
+      },
+    });
+
+    const damageText = `${prefix}${Math.round(hit.damage)}`;
+    const text = new Text({ text: damageText, style });
+    text.anchor.set(0.5, 0.5);
+    text.x = hit.position.x + (Math.random() - 0.5) * 20;
+    text.y = hit.position.y - 30;
+
+    this.combatFeedbackContainer.addChild(text);
+
+    // Add to floating texts for animation
+    this.floatingTexts.push({
+      text,
+      vx: (Math.random() - 0.5) * 50,
+      vy: -150,
+      life: 1000,
+      maxLife: 1000,
+    });
+
+    // Combo counter if applicable
+    if (hit.comboCount > 1) {
+      const comboStyle = new TextStyle({
+        fontFamily: 'Fredoka, Arial, sans-serif',
+        fontSize: 18,
+        fontWeight: '600',
+        fill: 0x00ffff,
+        stroke: { color: 0x000000, width: 3 },
+      });
+
+      const comboText = new Text({ text: `${hit.comboCount} HIT COMBO!`, style: comboStyle });
+      comboText.anchor.set(0.5, 0.5);
+      comboText.x = hit.position.x;
+      comboText.y = hit.position.y - 60;
+
+      this.combatFeedbackContainer.addChild(comboText);
+      this.floatingTexts.push({
+        text: comboText,
+        vx: 0,
+        vy: -80,
+        life: 800,
+        maxLife: 800,
+      });
+    }
+  }
+
+  private spawnHitEffect(hit: HitEvent): void {
+    // Base hit burst
+    let color = 0xffffff;
+    let count = 15;
+
+    if (hit.isCritical) {
+      color = 0xffd700;
+      count = 30;
+    } else if (hit.isCounter) {
+      color = 0xff6b6b;
+      count = 25;
+    } else if (hit.hitType === 'super') {
+      color = 0xff00ff;
+      count = 40;
+    }
+
+    this.particles.burst(hit.position.x, hit.position.y, color, count);
+
+    // Directional burst based on knockback
+    const angle = Math.atan2(hit.knockbackDirection.y, hit.knockbackDirection.x);
+    for (let i = -2; i <= 2; i++) {
+      const a = angle + i * 0.2;
+      this.particles.emit({
+        x: hit.position.x,
+        y: hit.position.y,
+        count: 3,
+        color: 0xffffff,
+        speed: 200 + hit.knockback * 0.3,
+        spread: 10,
+        life: 300,
+        size: 8,
+        type: 'circle',
+      });
+    }
+  }
+
+  private renderFeedbackEffect(fb: CombatFeedback): void {
+    switch (fb.type) {
+      case 'parry':
+        // Blue shield flash
+        this.particles.burst(fb.position.x, fb.position.y, 0x3b82f6, 20);
+        audio.playSound('parry');
+        break;
+
+      case 'dodge':
+        // Swift motion blur
+        this.particles.emit({
+          x: fb.position.x,
+          y: fb.position.y,
+          count: 10,
+          color: 0xffffff,
+          speed: 100,
+          spread: 30,
+          life: 200,
+          size: 10,
+          type: 'trail',
+        });
+        audio.playSound('dodge');
+        break;
+
+      case 'grab':
+        // Impact effect
+        this.particles.burst(fb.position.x, fb.position.y, 0xff6b6b, 15);
+        audio.playSound('grab');
+        break;
+
+      case 'escape':
+        // Break free burst
+        this.particles.burst(fb.position.x, fb.position.y, 0x22c55e, 25);
+        if (fb.text && this.combatFeedbackContainer) {
+          this.spawnFeedbackText(fb.position, 'ESCAPE!', 0x22c55e);
+        }
+        break;
+
+      case 'stagger':
+        // Dizzy effect
+        this.particles.burst(fb.position.x, fb.position.y, 0xffd700, 20);
+        if (this.combatFeedbackContainer) {
+          this.spawnFeedbackText(fb.position, 'STAGGER!', 0xffd700);
+        }
+        this.triggerScreenShake(5);
+        break;
+
+      case 'super_activate':
+        // Dramatic activation
+        this.particles.burst(fb.position.x, fb.position.y, 0xffd700, 50);
+        this.particles.burst(fb.position.x, fb.position.y, 0xff6b00, 30);
+        if (this.combatFeedbackContainer) {
+          this.spawnFeedbackText(fb.position, 'SUPER!', 0xffd700, 36);
+        }
+        this.triggerScreenShake(8);
+        audio.playSound('super');
+        break;
+
+      case 'super_hit':
+        // Massive impact
+        this.particles.burst(fb.position.x, fb.position.y, 0xff00ff, 40);
+        this.particles.burst(fb.position.x, fb.position.y, 0xffffff, 20);
+        this.triggerScreenShake(12);
+        break;
+    }
+  }
+
+  private spawnFeedbackText(position: Vector2, text: string, color: number, fontSize: number = 24): void {
+    if (!this.combatFeedbackContainer) return;
+
+    const style = new TextStyle({
+      fontFamily: 'Fredoka, Arial, sans-serif',
+      fontSize,
+      fontWeight: '700',
+      fill: color,
+      stroke: { color: 0x000000, width: 4 },
+    });
+
+    const textObj = new Text({ text, style });
+    textObj.anchor.set(0.5, 0.5);
+    textObj.x = position.x;
+    textObj.y = position.y - 40;
+
+    this.combatFeedbackContainer.addChild(textObj);
+    this.floatingTexts.push({
+      text: textObj,
+      vx: 0,
+      vy: -100,
+      life: 800,
+      maxLife: 800,
+    });
+  }
+
+  private updateFloatingTexts(deltaTime: number): void {
+    if (!this.combatFeedbackContainer) return;
+
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.life -= deltaTime;
+
+      if (ft.life <= 0) {
+        this.combatFeedbackContainer.removeChild(ft.text);
+        this.floatingTexts.splice(i, 1);
+        continue;
+      }
+
+      // Move text
+      ft.text.x += ft.vx * (deltaTime / 1000);
+      ft.text.y += ft.vy * (deltaTime / 1000);
+      ft.vy += 200 * (deltaTime / 1000);  // Gravity
+
+      // Fade out
+      ft.text.alpha = ft.life / ft.maxLife;
+
+      // Scale pop effect
+      const lifePercent = ft.life / ft.maxLife;
+      if (lifePercent > 0.8) {
+        ft.text.scale.set(1 + (1 - lifePercent) * 2);  // Pop in
+      }
+    }
+  }
+
+  private triggerHitstop(durationMs: number): void {
+    this.hitstopActive = true;
+    this.hitstopEndTime = performance.now() + durationMs;
   }
 
   private renderChaosEffects(events: ChaosEventState[]): void {

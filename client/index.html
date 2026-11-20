@@ -880,6 +880,201 @@
     }
 
     /* ============================================ */
+    /* ADVANCED COMBAT UI */
+    /* ============================================ */
+
+    /* Super Meter */
+    .super-meter {
+      position: absolute;
+      bottom: 180px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid var(--outline);
+    }
+
+    .super-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .super-bar-bg {
+      width: 200px;
+      height: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 6px;
+      border: 2px solid var(--outline);
+      overflow: hidden;
+    }
+
+    .super-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 0.3s ease, background 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .super-meter.ready {
+      border-color: #ffd700;
+      animation: superPulse 1s infinite;
+    }
+
+    .super-meter.ready .super-label {
+      color: #ffd700;
+    }
+
+    @keyframes superPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+      50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+    }
+
+    .super-text {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 100px;
+    }
+
+    /* Super Active Indicator */
+    .super-active {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ffd700, #ff6b00);
+      padding: 10px 30px;
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #000;
+      text-transform: uppercase;
+      display: none;
+      animation: superActiveGlow 0.5s infinite alternate;
+      border: 3px solid #000;
+    }
+
+    .super-active.visible {
+      display: block;
+    }
+
+    @keyframes superActiveGlow {
+      from { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); transform: translateX(-50%) scale(1); }
+      to { box-shadow: 0 0 40px rgba(255, 107, 0, 1); transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* Combo Counter */
+    .combo-display {
+      position: absolute;
+      top: 150px;
+      right: 50px;
+      text-align: center;
+      display: none;
+      transition: transform 0.1s ease;
+    }
+
+    .combo-display.visible {
+      display: block;
+      animation: comboPop 0.2s ease;
+    }
+
+    @keyframes comboPop {
+      0% { transform: scale(0.5); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .combo-count {
+      font-size: 4rem;
+      font-weight: 900;
+      color: #00ffff;
+      text-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 4px 0 #000;
+      line-height: 1;
+    }
+
+    .combo-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-shadow: 0 2px 0 #000;
+    }
+
+    /* Charge Indicator */
+    .charge-indicator {
+      position: absolute;
+      bottom: 230px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .charge-indicator.visible {
+      display: flex;
+      animation: chargePulse 0.5s infinite;
+    }
+
+    @keyframes chargePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .charge-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fbbf24;
+      text-transform: uppercase;
+    }
+
+    .charge-bar-bg {
+      width: 150px;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 4px;
+      border: 2px solid var(--outline);
+      overflow: hidden;
+    }
+
+    .charge-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #fbbf24;
+      transition: width 0.1s ease, background 0.1s ease;
+    }
+
+    /* Stagger Display */
+    .stagger-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      font-weight: 900;
+      color: #ffd700;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 4px 0 #000;
+      display: none;
+    }
+
+    .stagger-display.stunned {
+      display: block;
+      animation: staggerShake 0.1s infinite;
+    }
+
+    @keyframes staggerShake {
+      0%, 100% { transform: translate(-50%, -50%) rotate(-2deg); }
+      50% { transform: translate(-50%, -50%) rotate(2deg); }
+    }
+
+    /* ============================================ */
     /* RESULTS SCREEN */
     /* ============================================ */
     #results-screen {
@@ -1138,10 +1333,45 @@
         </div>
       </div>
 
+      <!-- Super Meter -->
+      <div class="super-meter" id="super-meter">
+        <div class="super-label">SUPER</div>
+        <div class="super-bar-bg">
+          <div class="super-bar-fill" id="super-bar"></div>
+        </div>
+        <div class="super-text" id="super-text">0%</div>
+      </div>
+
+      <!-- Super Active Indicator -->
+      <div class="super-active" id="super-active">
+        <span>⚡ SUPER ACTIVE ⚡</span>
+      </div>
+
+      <!-- Combo Counter -->
+      <div class="combo-display" id="combo-display">
+        <div class="combo-count" id="combo-count">0</div>
+        <div class="combo-label">HIT COMBO!</div>
+      </div>
+
+      <!-- Charge Indicator -->
+      <div class="charge-indicator" id="charge-indicator">
+        <div class="charge-label">CHARGING</div>
+        <div class="charge-bar-bg">
+          <div class="charge-bar-fill" id="charge-bar"></div>
+        </div>
+      </div>
+
+      <!-- Stagger Display -->
+      <div class="stagger-display" id="stagger-display"></div>
+
       <div class="controls-hint">
         <span><div class="key">W</div><div class="key">A</div><div class="key">S</div><div class="key">D</div> Move</span>
-        <span><div class="key wide">SPACE</div> Attack</span>
-        <span><div class="key">Q</div> Special</span>
+        <span><div class="key wide">SPACE</div> Attack (Hold to charge)</span>
+        <span><div class="key">Q</div> Ability</span>
+        <span><div class="key">SHIFT</div> Dodge</span>
+        <span><div class="key">F</div> Parry</span>
+        <span><div class="key">G</div> Grab</span>
+        <span><div class="key">R</div> Super</span>
       </div>
     </div>
 

@@ -531,6 +531,96 @@ export class UIManager {
           attackIndicator.classList.remove('ready');
         }
       }
+
+      // === ADVANCED COMBAT HUD ===
+
+      // Update super meter
+      const superMeter = document.getElementById('super-meter');
+      const superBar = document.getElementById('super-bar') as HTMLElement;
+      const superText = document.getElementById('super-text');
+
+      if (superMeter && superBar) {
+        const superPercent = Math.min(100, (localPlayer.superMeter || 0));
+        superBar.style.width = `${superPercent}%`;
+
+        // Change color based on fill level
+        if (superPercent >= 100) {
+          superBar.style.background = 'linear-gradient(90deg, #ffd700, #ff6b00)';
+          superMeter.classList.add('ready');
+        } else if (superPercent >= 50) {
+          superBar.style.background = 'linear-gradient(90deg, #f97316, #fbbf24)';
+          superMeter.classList.remove('ready');
+        } else {
+          superBar.style.background = 'linear-gradient(90deg, #3b82f6, #60a5fa)';
+          superMeter.classList.remove('ready');
+        }
+
+        if (superText) {
+          superText.textContent = superPercent >= 100 ? 'SUPER READY! [R]' : `${Math.round(superPercent)}%`;
+        }
+      }
+
+      // Show super active indicator
+      const superActiveIndicator = document.getElementById('super-active');
+      if (superActiveIndicator) {
+        if (localPlayer.isSuperActive) {
+          superActiveIndicator.classList.add('visible');
+        } else {
+          superActiveIndicator.classList.remove('visible');
+        }
+      }
+
+      // Update combo counter
+      const comboDisplay = document.getElementById('combo-display');
+      const comboCount = document.getElementById('combo-count');
+
+      if (comboDisplay && comboCount) {
+        if (localPlayer.comboCount && localPlayer.comboCount > 1) {
+          comboDisplay.classList.add('visible');
+          comboCount.textContent = `${localPlayer.comboCount}`;
+
+          // Scale based on combo
+          const scale = 1 + Math.min(localPlayer.comboCount * 0.1, 0.5);
+          comboDisplay.style.transform = `scale(${scale})`;
+        } else {
+          comboDisplay.classList.remove('visible');
+        }
+      }
+
+      // Show charge indicator
+      const chargeIndicator = document.getElementById('charge-indicator');
+      const chargeBar = document.getElementById('charge-bar') as HTMLElement;
+
+      if (chargeIndicator && chargeBar) {
+        if (localPlayer.isCharging && localPlayer.chargeLevel > 0) {
+          chargeIndicator.classList.add('visible');
+          const chargePercent = Math.min(100, (localPlayer.chargeLevel / 3) * 100);
+          chargeBar.style.width = `${chargePercent}%`;
+
+          // Color by charge level
+          if (chargePercent >= 90) {
+            chargeBar.style.background = '#ef4444';  // Red - max charge
+          } else if (chargePercent >= 50) {
+            chargeBar.style.background = '#f97316';  // Orange
+          } else {
+            chargeBar.style.background = '#fbbf24';  // Yellow
+          }
+        } else {
+          chargeIndicator.classList.remove('visible');
+        }
+      }
+
+      // Show stagger meter (enemy's stagger buildup)
+      const staggerDisplay = document.getElementById('stagger-display');
+      if (staggerDisplay) {
+        if (localPlayer.isStaggered) {
+          staggerDisplay.classList.add('stunned');
+          staggerDisplay.textContent = 'STAGGERED!';
+        } else {
+          staggerDisplay.classList.remove('stunned');
+          staggerDisplay.textContent = '';
+        }
+      }
     }
   }
 

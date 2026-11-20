@@ -27,6 +27,9 @@ import {
   ActivePowerUp,
   AbilityDefinition,
   ProjectileEffect,
+  HitEvent,
+  CombatFeedback,
+  HitType,
 } from '@beast-royale/shared';
 import {
   PHYSICS_TIMESTEP,
@@ -143,6 +146,10 @@ export class Match {
   private doors: Map<string, DoorState> = new Map();
   private effectZones: Map<string, EffectZoneState> = new Map();
   private lastPositionRecordTime: number = 0;
+
+  // Combat event system
+  private recentHits: HitEvent[] = [];
+  private combatFeedback: CombatFeedback[] = [];
 
   constructor(
     id: string,
@@ -335,6 +342,36 @@ export class Match {
         stunUntil: 0,
         slowMultiplier: 1.0,
         positionHistory: [],
+        // === ADVANCED COMBAT SYSTEM ===
+        comboCount: 0,
+        comboTimer: 0,
+        lastComboTime: 0,
+        superMeter: 0,
+        isSuperActive: false,
+        superDuration: 0,
+        isCharging: false,
+        chargeStartTime: 0,
+        chargeLevel: 0,
+        isDodging: false,
+        dodgeCooldown: 0,
+        isParrying: false,
+        parryWindow: 0,
+        perfectParry: false,
+        parryStunUntil: 0,
+        isGrabbing: false,
+        grabbedPlayer: null,
+        grabbedBy: null,
+        grabEscapeProgress: 0,
+        staggerMeter: 0,
+        isStaggered: false,
+        staggerDuration: 0,
+        hitstopRemaining: 0,
+        lastHitDirection: { x: 0, y: 0 },
+        criticalHit: false,
+        counterHit: false,
+        attackDirection: 'neutral',
+        momentum: 0,
+        momentumDecay: 0,
       };
 
       this.players.set(playerId, playerState);
@@ -382,6 +419,36 @@ export class Match {
         stunUntil: 0,
         slowMultiplier: 1.0,
         positionHistory: [],
+        // === ADVANCED COMBAT SYSTEM ===
+        comboCount: 0,
+        comboTimer: 0,
+        lastComboTime: 0,
+        superMeter: 0,
+        isSuperActive: false,
+        superDuration: 0,
+        isCharging: false,
+        chargeStartTime: 0,
+        chargeLevel: 0,
+        isDodging: false,
+        dodgeCooldown: 0,
+        isParrying: false,
+        parryWindow: 0,
+        perfectParry: false,
+        parryStunUntil: 0,
+        isGrabbing: false,
+        grabbedPlayer: null,
+        grabbedBy: null,
+        grabEscapeProgress: 0,
+        staggerMeter: 0,
+        isStaggered: false,
+        staggerDuration: 0,
+        hitstopRemaining: 0,
+        lastHitDirection: { x: 0, y: 0 },
+        criticalHit: false,
+        counterHit: false,
+        attackDirection: 'neutral',
+        momentum: 0,
+        momentumDecay: 0,
       };
 
       this.players.set(botId, botState);
@@ -749,8 +816,54 @@ export class Match {
         this.tryEnterVent(player);
       }
 
-      // Handle attack (reveals from cover)
-      if (input.attack && player.attackCooldownRemaining <= 0) {
+      // Skip combat if parry stunned
+      if (player.parryStunUntil > this.currentTime) {
+        player.lastInputSequence = input.sequenceNumber;
+        continue;
+      }
+
+      // === ADVANCED COMBAT INPUT HANDLING ===
+
+      // Handle dodge (Shift key)
+      if (input.dodge && !player.isDodging && player.dodgeCooldown <= 0) {
+        this.performDodge(player);
+      }
+
+      // Handle parry (Right click / F key)
+      if (input.parry && !player.isParrying && !player.isDodging) {
+        this.performParry(player);
+      }
+
+      // Handle grab (G key)
+      if (input.grab && !player.isGrabbing && !player.isDodging) {
+        this.performGrab(player);
+      }
+
+      // Handle grab escape (mash any button when grabbed)
+      if (player.grabbedBy && input.grabEscape) {
+        this.handleGrabEscape(player);
+      }
+
+      // Handle super activation (R key when meter full)
+      if (input.superActivate && player.superMeter >= 100) {
+        this.activateSuper(player);
+      }
+
+      // Handle charge attack (hold attack button)
+      if (input.attackHeld && !player.isCharging && player.attackCooldownRemaining <= 0) {
+        player.isCharging = true;
+        player.chargeStartTime = this.currentTime;
+        player.chargeLevel = 0;
+      } else if (!input.attackHeld && player.isCharging) {
+        // Release charged attack
+        player.isHidden = false;
+        this.performAttack(player);
+        player.attackCooldownRemaining = beast.attackCooldown;
+        // chargeLevel is reset in performAttack
+      }
+
+      // Handle quick attack (tap attack when not charging)
+      if (input.attack && !input.attackHeld && !player.isCharging && player.attackCooldownRemaining <= 0) {
         player.isHidden = false;  // Reveal from cover
         this.performAttack(player);
         player.attackCooldownRemaining = beast.attackCooldown;
@@ -767,6 +880,9 @@ export class Match {
       // Update cooldowns
       player.attackCooldownRemaining = Math.max(0, player.attackCooldownRemaining - deltaTime);
       player.abilityCooldownRemaining = Math.max(0, player.abilityCooldownRemaining - deltaTime);
+
+      // Update combat timers
+      this.updateCombatTimers(player, deltaTime);
 
       // Regenerate ability charge when cooldown is ready
       if (player.abilityCooldownRemaining <= 0 && player.abilityCharges < 1) {
@@ -1986,34 +2102,531 @@ export class Match {
     const beast = getBeast(attacker.beastId);
     if (!beast) return;
 
+    // Check if staggered or grabbed (can't attack)
+    if (attacker.isStaggered || attacker.grabbedBy) return;
+
     attacker.isAttacking = true;
     setTimeout(() => { attacker.isAttacking = false; }, 200);
 
     const effects = getCombinedEffects(this.activeChaosEvents);
 
+    // Calculate charge level bonus (0-3)
+    let chargeMultiplier = 1.0;
+    if (attacker.chargeLevel >= 3) {
+      chargeMultiplier = 2.5;  // Fully charged
+    } else if (attacker.chargeLevel >= 2) {
+      chargeMultiplier = 1.8;
+    } else if (attacker.chargeLevel >= 1) {
+      chargeMultiplier = 1.3;
+    }
+
+    // Super mode damage bonus
+    const superMultiplier = attacker.isSuperActive ? 1.5 : 1.0;
+
+    // Momentum bonus (consecutive hits)
+    const momentumMultiplier = 1.0 + (attacker.momentum * 0.1);
+
     // Find players in range
+    let hitCount = 0;
     for (const target of this.players.values()) {
       if (target.id === attacker.id || target.status !== 'alive') continue;
       if (target.invulnerableUntil > this.currentTime) continue;
+      if (target.isDodging) continue;  // I-frames during dodge
 
       const dist = vec2Distance(attacker.position, target.position);
       if (dist <= beast.attackRange) {
+        // Check for parry
+        if (target.isParrying && target.parryWindow > 0) {
+          // PARRIED! Punish the attacker
+          this.handleSuccessfulParry(target, attacker);
+          continue;
+        }
+
+        // Determine hit type
+        let hitType: HitType = 'normal';
+        let damageMultiplier = 1.0;
+        let knockbackMultiplier = 1.0;
+        let hitstopFrames = 4;
+
+        // Critical hit (10% chance, 20% with super active)
+        const critChance = attacker.isSuperActive ? 0.20 : 0.10;
+        const isCritical = this.rng.float(0, 1) < critChance;
+        if (isCritical) {
+          hitType = 'critical';
+          damageMultiplier *= 1.5;
+          knockbackMultiplier *= 1.3;
+          hitstopFrames = 8;
+        }
+
+        // Counter hit (target was attacking or charging)
+        const isCounter = target.isAttacking || target.isCharging || target.isUsingAbility;
+        if (isCounter) {
+          hitType = isCritical ? 'critical' : 'counter';
+          damageMultiplier *= 1.25;
+          knockbackMultiplier *= 1.2;
+          hitstopFrames = Math.max(hitstopFrames, 6);
+        }
+
+        // Charged attack
+        if (attacker.chargeLevel >= 2) {
+          hitType = isCritical ? 'critical' : 'charged';
+          hitstopFrames = Math.max(hitstopFrames, attacker.chargeLevel * 3);
+        }
+
+        // Super attack
+        if (attacker.isSuperActive) {
+          hitType = 'super';
+          hitstopFrames = 10;
+        }
+
+        // Calculate final damage
+        const baseDamage = 10 * beast.attackPower;
+        const finalDamage = baseDamage * damageMultiplier * chargeMultiplier * superMultiplier * momentumMultiplier;
+
         // Apply knockback
-        const knockback = calculateKnockback(attacker, target);
-        const scaledKnockback = vec2Scale(knockback, effects.knockbackMultiplier || 1.0);
+        const knockbackDir = vec2Normalize(vec2Sub(target.position, attacker.position));
+        const baseKnockback = calculateKnockback(attacker, target);
+        const scaledKnockback = vec2Scale(baseKnockback,
+          (effects.knockbackMultiplier || 1.0) * knockbackMultiplier * chargeMultiplier * superMultiplier
+        );
         target.velocity = vec2Add(target.velocity, scaledKnockback);
 
         // Apply damage
-        const damage = 10 * beast.attackPower;
-        target.health -= damage;
-        target.knockbackMultiplier += 0.05;  // Increase future knockback
+        target.health -= finalDamage;
+        target.knockbackMultiplier += 0.05 * chargeMultiplier;
+
+        // Build stagger meter
+        target.staggerMeter += 15 * chargeMultiplier;
+        if (target.staggerMeter >= 100) {
+          this.triggerStagger(target);
+        }
 
         // Track attacker for kill credit
         target.lastDamagedBy = attacker.id;
         (target as any).lastDamagedAt = this.currentTime;
 
+        // Apply hitstop to both players
+        attacker.hitstopRemaining = hitstopFrames;
+        target.hitstopRemaining = hitstopFrames;
+        target.lastHitDirection = knockbackDir;
+        target.criticalHit = isCritical;
+        target.counterHit = isCounter;
+
+        // Build super meter
+        attacker.superMeter = Math.min(100, attacker.superMeter + 8 + (isCritical ? 5 : 0) + (isCounter ? 3 : 0));
+        target.superMeter = Math.min(100, target.superMeter + 4);  // Taking damage builds meter too
+
+        // Build momentum
+        attacker.momentum = Math.min(10, attacker.momentum + 1);
+        attacker.momentumDecay = 2000;  // Reset decay timer
+
+        // Update combo
+        this.updateCombo(attacker, target);
+
+        // Create hit event for client
+        const hitEvent: HitEvent = {
+          id: uuidv4(),
+          attackerId: attacker.id,
+          attackerName: attacker.displayName,
+          victimId: target.id,
+          victimName: target.displayName,
+          damage: Math.round(finalDamage),
+          knockback: vec2Length(scaledKnockback),
+          knockbackDirection: knockbackDir,
+          position: target.position,
+          hitType,
+          comboCount: attacker.comboCount,
+          chargeLevel: attacker.chargeLevel,
+          isCritical,
+          isCounter,
+          hitstopFrames,
+          timestamp: this.currentTime,
+        };
+        this.recentHits.push(hitEvent);
+
         // Brief invulnerability
         target.invulnerableUntil = this.currentTime + INVULNERABILITY_DURATION;
+
+        hitCount++;
+      }
+    }
+
+    // Reset charge after attack
+    attacker.chargeLevel = 0;
+    attacker.isCharging = false;
+
+    // Decay momentum if no hits
+    if (hitCount === 0) {
+      attacker.momentum = Math.max(0, attacker.momentum - 2);
+    }
+
+    // Clear old hit events (keep last 500ms)
+    this.recentHits = this.recentHits.filter(h => this.currentTime - h.timestamp < 500);
+  }
+
+  // === ADVANCED COMBAT MECHANICS ===
+
+  private handleSuccessfulParry(parrier: PlayerState, attacker: PlayerState): void {
+    // Perfect parry (within first 100ms of parry window)
+    const isPerfect = parrier.parryWindow > 200;
+
+    parrier.perfectParry = isPerfect;
+
+    // Stun the attacker
+    attacker.parryStunUntil = this.currentTime + (isPerfect ? 600 : 300);
+    attacker.isAttacking = false;
+    attacker.isCharging = false;
+    attacker.chargeLevel = 0;
+
+    // Build parrier's super meter
+    parrier.superMeter = Math.min(100, parrier.superMeter + (isPerfect ? 25 : 15));
+
+    // Combat feedback
+    this.combatFeedback.push({
+      type: 'parry',
+      position: parrier.position,
+      direction: vec2Normalize(vec2Sub(attacker.position, parrier.position)),
+      magnitude: isPerfect ? 2.0 : 1.0,
+      text: isPerfect ? 'PERFECT!' : 'PARRY!',
+    });
+
+    // Push attacker back
+    const pushDir = vec2Normalize(vec2Sub(attacker.position, parrier.position));
+    attacker.velocity = vec2Add(attacker.velocity, vec2Scale(pushDir, isPerfect ? 400 : 200));
+  }
+
+  private triggerStagger(target: PlayerState): void {
+    target.isStaggered = true;
+    target.staggerDuration = 1000;  // 1 second stagger
+    target.staggerMeter = 0;
+    target.velocity = vec2Scale(target.velocity, 0.3);  // Slow down
+
+    this.combatFeedback.push({
+      type: 'stagger',
+      position: target.position,
+      direction: { x: 0, y: -1 },
+      magnitude: 1.5,
+      text: 'STAGGER!',
+    });
+  }
+
+  private updateCombo(attacker: PlayerState, target: PlayerState): void {
+    const now = this.currentTime;
+    const comboWindow = 1500;  // 1.5 second combo window
+
+    if (now - attacker.lastComboTime < comboWindow) {
+      attacker.comboCount++;
+    } else {
+      attacker.comboCount = 1;
+    }
+
+    attacker.lastComboTime = now;
+    attacker.comboTimer = comboWindow;
+
+    // Bonus damage for combos
+    if (attacker.comboCount >= 3) {
+      // Combo text feedback
+      let comboText = `${attacker.comboCount} HIT COMBO!`;
+      if (attacker.comboCount >= 10) comboText = `${attacker.comboCount} HIT BEAST MODE!`;
+      else if (attacker.comboCount >= 7) comboText = `${attacker.comboCount} HIT RAMPAGE!`;
+      else if (attacker.comboCount >= 5) comboText = `${attacker.comboCount} HIT FRENZY!`;
+
+      this.combatFeedback.push({
+        type: 'hit',
+        position: target.position,
+        direction: { x: 0, y: -1 },
+        magnitude: Math.min(3, 1 + attacker.comboCount * 0.2),
+        text: comboText,
+      });
+    }
+  }
+
+  private performDodge(player: PlayerState): void {
+    if (player.dodgeCooldown > 0 || player.isDodging) return;
+    if (player.isStaggered || player.grabbedBy) return;
+
+    player.isDodging = true;
+    player.invulnerableUntil = this.currentTime + 200;  // I-frames
+
+    // Dodge in movement direction or facing direction
+    const dodgeDir = vec2Length(player.velocity) > 10
+      ? vec2Normalize(player.velocity)
+      : vec2FromAngle(player.facingAngle, 1);
+
+    const dodgeSpeed = 600;
+    player.velocity = vec2Scale(dodgeDir, dodgeSpeed);
+
+    // Set cooldown
+    player.dodgeCooldown = 800;
+
+    this.combatFeedback.push({
+      type: 'dodge',
+      position: player.position,
+      direction: dodgeDir,
+      magnitude: 1.0,
+    });
+
+    // End dodge after duration
+    setTimeout(() => {
+      player.isDodging = false;
+    }, 200);
+  }
+
+  private performParry(player: PlayerState): void {
+    if (player.isParrying || player.parryWindow > 0) return;
+    if (player.isStaggered || player.grabbedBy) return;
+
+    player.isParrying = true;
+    player.parryWindow = 300;  // 300ms parry window
+    player.perfectParry = false;
+
+    // End parry after window
+    setTimeout(() => {
+      player.isParrying = false;
+      player.parryWindow = 0;
+    }, 300);
+  }
+
+  private performGrab(grabber: PlayerState): void {
+    if (grabber.isGrabbing || grabber.grabbedBy) return;
+    if (grabber.isStaggered) return;
+
+    const grabRange = 50;
+
+    // Find closest target in range
+    let closestTarget: PlayerState | null = null;
+    let closestDist = Infinity;
+
+    for (const target of this.players.values()) {
+      if (target.id === grabber.id || target.status !== 'alive') continue;
+      if (target.isDodging || target.grabbedBy) continue;  // Can't grab dodging or already grabbed players
+
+      const dist = vec2Distance(grabber.position, target.position);
+      if (dist < grabRange && dist < closestDist) {
+        closestDist = dist;
+        closestTarget = target;
+      }
+    }
+
+    if (closestTarget) {
+      // Successful grab!
+      grabber.isGrabbing = true;
+      grabber.grabbedPlayer = closestTarget.id;
+      closestTarget.grabbedBy = grabber.id;
+      closestTarget.grabEscapeProgress = 0;
+
+      // Stop both players
+      grabber.velocity = { x: 0, y: 0 };
+      closestTarget.velocity = { x: 0, y: 0 };
+
+      this.combatFeedback.push({
+        type: 'grab',
+        position: vec2Lerp(grabber.position, closestTarget.position, 0.5),
+        direction: vec2Normalize(vec2Sub(closestTarget.position, grabber.position)),
+        magnitude: 1.0,
+        text: 'GRAB!',
+      });
+
+      // Auto-throw after 1 second if not escaped
+      setTimeout(() => {
+        if (grabber.grabbedPlayer === closestTarget!.id) {
+          this.performThrow(grabber, closestTarget!);
+        }
+      }, 1000);
+    }
+  }
+
+  private performThrow(grabber: PlayerState, victim: PlayerState): void {
+    // Release the grab
+    grabber.isGrabbing = false;
+    grabber.grabbedPlayer = null;
+    victim.grabbedBy = null;
+    victim.grabEscapeProgress = 0;
+
+    // Throw the victim
+    const throwDir = vec2FromAngle(grabber.facingAngle, 1);
+    const throwForce = 800;
+    victim.velocity = vec2Scale(throwDir, throwForce);
+
+    // Damage
+    const throwDamage = 15;
+    victim.health -= throwDamage;
+    victim.lastDamagedBy = grabber.id;
+    (victim as any).lastDamagedAt = this.currentTime;
+
+    // Build stagger
+    victim.staggerMeter += 25;
+    if (victim.staggerMeter >= 100) {
+      this.triggerStagger(victim);
+    }
+
+    // Invulnerability
+    victim.invulnerableUntil = this.currentTime + INVULNERABILITY_DURATION;
+
+    // Super meter
+    grabber.superMeter = Math.min(100, grabber.superMeter + 15);
+
+    // Create hit event
+    this.recentHits.push({
+      id: uuidv4(),
+      attackerId: grabber.id,
+      attackerName: grabber.displayName,
+      victimId: victim.id,
+      victimName: victim.displayName,
+      damage: throwDamage,
+      knockback: throwForce,
+      knockbackDirection: throwDir,
+      position: victim.position,
+      hitType: 'grab',
+      comboCount: 1,
+      chargeLevel: 0,
+      isCritical: false,
+      isCounter: false,
+      hitstopFrames: 6,
+      timestamp: this.currentTime,
+    });
+
+    this.combatFeedback.push({
+      type: 'hit',
+      position: victim.position,
+      direction: throwDir,
+      magnitude: 1.5,
+      text: 'THROW!',
+    });
+  }
+
+  private handleGrabEscape(player: PlayerState): void {
+    if (!player.grabbedBy) return;
+
+    player.grabEscapeProgress += 15;  // Increase per mash
+
+    if (player.grabEscapeProgress >= 100) {
+      // Escaped!
+      const grabber = this.players.get(player.grabbedBy);
+      if (grabber) {
+        grabber.isGrabbing = false;
+        grabber.grabbedPlayer = null;
+
+        // Push grabber back
+        const pushDir = vec2Normalize(vec2Sub(grabber.position, player.position));
+        grabber.velocity = vec2Add(grabber.velocity, vec2Scale(pushDir, 300));
+      }
+
+      player.grabbedBy = null;
+      player.grabEscapeProgress = 0;
+
+      this.combatFeedback.push({
+        type: 'escape',
+        position: player.position,
+        direction: { x: 0, y: -1 },
+        magnitude: 1.0,
+        text: 'ESCAPE!',
+      });
+    }
+  }
+
+  private activateSuper(player: PlayerState): void {
+    if (player.superMeter < 100) return;
+    if (player.isSuperActive) return;
+    if (player.isStaggered || player.grabbedBy) return;
+
+    player.isSuperActive = true;
+    player.superMeter = 0;
+    player.superDuration = 5000;  // 5 second super mode
+
+    // Heal slightly
+    player.health = Math.min(player.maxHealth, player.health + 20);
+
+    // Reset stagger
+    player.staggerMeter = 0;
+
+    this.combatFeedback.push({
+      type: 'super_activate',
+      position: player.position,
+      direction: { x: 0, y: -1 },
+      magnitude: 2.0,
+      text: 'SUPER MODE!',
+    });
+
+    // AOE knockback on activation
+    this.aoeKnockback(player.position, 100, 300);
+  }
+
+  private updateCombatTimers(player: PlayerState, deltaTime: number): void {
+    // Combo timer decay
+    if (player.comboTimer > 0) {
+      player.comboTimer -= deltaTime;
+      if (player.comboTimer <= 0) {
+        player.comboCount = 0;
+      }
+    }
+
+    // Momentum decay
+    if (player.momentumDecay > 0) {
+      player.momentumDecay -= deltaTime;
+      if (player.momentumDecay <= 0) {
+        player.momentum = Math.max(0, player.momentum - 1);
+        if (player.momentum > 0) {
+          player.momentumDecay = 500;  // Continue decaying
+        }
+      }
+    }
+
+    // Super duration
+    if (player.isSuperActive) {
+      player.superDuration -= deltaTime;
+      if (player.superDuration <= 0) {
+        player.isSuperActive = false;
+        player.superDuration = 0;
+      }
+    }
+
+    // Stagger duration
+    if (player.isStaggered) {
+      player.staggerDuration -= deltaTime;
+      if (player.staggerDuration <= 0) {
+        player.isStaggered = false;
+        player.staggerDuration = 0;
+      }
+    }
+
+    // Stagger meter natural decay
+    if (!player.isStaggered && player.staggerMeter > 0) {
+      player.staggerMeter = Math.max(0, player.staggerMeter - deltaTime * 0.02);
+    }
+
+    // Dodge cooldown
+    if (player.dodgeCooldown > 0) {
+      player.dodgeCooldown -= deltaTime;
+    }
+
+    // Parry window
+    if (player.parryWindow > 0) {
+      player.parryWindow -= deltaTime;
+      if (player.parryWindow <= 0) {
+        player.isParrying = false;
+      }
+    }
+
+    // Parry stun
+    if (player.parryStunUntil > 0 && this.currentTime >= player.parryStunUntil) {
+      player.parryStunUntil = 0;
+    }
+
+    // Hitstop countdown
+    if (player.hitstopRemaining > 0) {
+      player.hitstopRemaining--;
+    }
+
+    // Charge attack
+    if (player.isCharging) {
+      const chargeTime = this.currentTime - player.chargeStartTime;
+      if (chargeTime >= 1500) {
+        player.chargeLevel = 3;
+      } else if (chargeTime >= 1000) {
+        player.chargeLevel = 2;
+      } else if (chargeTime >= 500) {
+        player.chargeLevel = 1;
       }
     }
   }
@@ -2265,6 +2878,9 @@ export class Match {
       type: 'snapshot',
       data: state,
     });
+
+    // Clear one-shot feedback after sending
+    this.combatFeedback = [];
   }
 
   private broadcast(message: ServerMessage): void {
@@ -2306,6 +2922,8 @@ export class Match {
       buttons: Array.from(this.buttons.values()),
       doors: Array.from(this.doors.values()),
       effectZones: Array.from(this.effectZones.values()),
+      recentHits: this.recentHits,
+      combatFeedback: this.combatFeedback,
     };
   }
 }

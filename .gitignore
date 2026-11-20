@@ -3,3 +3,8 @@ dist/
 .vercel/
 *.log
 .DS_Store
+node_modules
+.env
+.env.*
+build
+dist

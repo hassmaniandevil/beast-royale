@@ -195,6 +195,13 @@ export class Game {
       panic: false,
       interact: inputState.interact,
       aimDirection: inputState.aimDirection,
+      // Advanced combat inputs
+      attackHeld: inputState.attackHeld,
+      dodge: inputState.dodge,
+      parry: inputState.parry,
+      grab: inputState.grab,
+      superActivate: inputState.superActivate,
+      grabEscape: inputState.grabEscape,
     });
 
     // Clear one-shot inputs

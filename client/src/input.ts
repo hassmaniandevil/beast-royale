@@ -12,6 +12,13 @@ export interface InputState {
   panic: boolean;
   interact: boolean;
   aimDirection: Vector2;
+  // Advanced combat inputs
+  attackHeld: boolean;
+  dodge: boolean;
+  parry: boolean;
+  grab: boolean;
+  superActivate: boolean;
+  grabEscape: boolean;
 }
 
 export class InputManager {
@@ -26,6 +33,14 @@ export class InputManager {
   private panic: boolean = false;
   private interact: boolean = false;
   private aimDirection: Vector2 = { x: 1, y: 0 };
+
+  // Advanced combat state
+  private attackHeld: boolean = false;
+  private dodge: boolean = false;
+  private parry: boolean = false;
+  private grab: boolean = false;
+  private superActivate: boolean = false;
+  private grabEscape: boolean = false;
 
   // Keyboard state
   private keys: Set<string> = new Set();
@@ -89,6 +104,12 @@ export class InputManager {
     this.panic = false;
     this.interact = false;
     this.aimDirection = { x: 1, y: 0 };
+    this.attackHeld = false;
+    this.dodge = false;
+    this.parry = false;
+    this.grab = false;
+    this.superActivate = false;
+    this.grabEscape = false;
     this.keys.clear();
     this.joystickActive = false;
   }
@@ -106,6 +127,22 @@ export class InputManager {
       this.mouseX = e.clientX;
       this.mouseY = e.clientY;
       this.updateAimDirection();
+    });
+
+    // Right click for parry
+    window.addEventListener('mousedown', (e) => {
+      if (!this.enabled) return;
+      if (e.button === 2) {  // Right click
+        this.parry = true;
+        e.preventDefault();
+      }
+    });
+
+    // Disable context menu on right click
+    window.addEventListener('contextmenu', (e) => {
+      if (this.enabled) {
+        e.preventDefault();
+      }
     });
   }
 
@@ -131,9 +168,10 @@ export class InputManager {
     const key = e.key.toLowerCase();
     this.keys.add(key);
 
-    // Attack (Space or J)
+    // Attack (Space or J) - tap for quick attack
     if (key === ' ' || key === 'j') {
       this.attack = true;
+      this.attackHeld = true;  // Track held state for charge
       e.preventDefault();
     }
 
@@ -149,11 +187,42 @@ export class InputManager {
       e.preventDefault();
     }
 
-    // Panic (P or Shift)
-    if (key === 'p' || key === 'shift') {
+    // Panic (P)
+    if (key === 'p') {
       this.panic = true;
       this.game.panic();
       e.preventDefault();
+    }
+
+    // === ADVANCED COMBAT CONTROLS ===
+
+    // Dodge (Shift or L)
+    if (key === 'shift' || key === 'l') {
+      this.dodge = true;
+      e.preventDefault();
+    }
+
+    // Parry/Block (F or Right Mouse handled separately)
+    if (key === 'f') {
+      this.parry = true;
+      e.preventDefault();
+    }
+
+    // Grab (G)
+    if (key === 'g') {
+      this.grab = true;
+      e.preventDefault();
+    }
+
+    // Super Activate (R)
+    if (key === 'r') {
+      this.superActivate = true;
+      e.preventDefault();
+    }
+
+    // Grab Escape (mash any key when grabbed - space works)
+    if (key === ' ' || key === 'x') {
+      this.grabEscape = true;
     }
 
     this.updateMovementFromKeys();
@@ -162,6 +231,12 @@ export class InputManager {
   private handleKeyUp(e: KeyboardEvent): void {
     const key = e.key.toLowerCase();
     this.keys.delete(key);
+
+    // Release charge attack when space/j released
+    if (key === ' ' || key === 'j') {
+      this.attackHeld = false;
+    }
+
     this.updateMovementFromKeys();
   }
 
@@ -290,6 +365,13 @@ export class InputManager {
       panic: this.panic,
       interact: this.interact,
       aimDirection: { ...this.aimDirection },
+      // Advanced combat
+      attackHeld: this.attackHeld,
+      dodge: this.dodge,
+      parry: this.parry,
+      grab: this.grab,
+      superActivate: this.superActivate,
+      grabEscape: this.grabEscape,
     };
   }
 
@@ -298,5 +380,10 @@ export class InputManager {
     this.ability = false;
     this.panic = false;
     this.interact = false;
+    this.dodge = false;
+    this.parry = false;
+    this.grab = false;
+    this.superActivate = false;
+    this.grabEscape = false;
   }
 }
